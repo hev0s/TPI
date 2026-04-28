@@ -14,7 +14,7 @@ const __dirname = path.dirname(__filename);
 app.use(cors({
     origin: 'https://tpi26nde.mycpnv.ch', // L'URL du front-end
     //origin: 'http://localhost:3000',
-    // credentials: true
+    credentials: true
 }));
 
 // HTML
