@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DuckyVolt - Connexion</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+            background: linear-gradient(135deg, #e5e3df 0%, #f8f9fa 100%);
+        }
+
+        .lang-container {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+        }
+
+        .lang-selector {
+            padding: 10px 14px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            font-size: 14px;
+            color: #202124;
+            cursor: pointer;
+            outline: none;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            padding: 40px 30px;
+            border-radius: 24px;
+            width: 100%;
+            max-width: 360px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        /* --- Styles pour le logo --- */
+        .logo-container {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .app-logo {
+            width: 120px;
+            height: auto;
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
+        }
+
+        .container h2 {
+            margin-top: 0;
+            color: #202124;
+            font-weight: 600;
+            margin-bottom: 24px;
+        }
+
+        .hidden { display: none; }
+
+        input {
+            display: block;
+            width: 100%;
+            margin-bottom: 16px;
+            padding: 14px 16px;
+            border: 1px solid rgba(218, 220, 224, 0.6);
+            border-radius: 12px;
+            font-size: 15px;
+            background-color: rgba(255, 255, 255, 0.6);
+            transition: all 0.2s ease;
+            box-sizing: border-box;
+            color: #202124;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #1a73e8;
+            background-color: white;
+            box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.2);
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background-color: #1a73e8;
+            color: white;
+            border: none;
+            cursor: pointer;
+            margin-bottom: 16px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            transition: transform 0.1s, background-color 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 12px rgba(26, 115, 232, 0.2);
+        }
+
+        button:hover {
+            background-color: #1557b0;
+            box-shadow: 0 6px 16px rgba(26, 115, 232, 0.3);
+        }
+
+        button:active {
+            transform: scale(0.97);
+        }
+
+        p {
+            color: #5f6368;
+            font-size: 14px;
+            margin: 0;
+        }
+
+        a {
+            color: #1a73e8;
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.2s;
+        }
+
+        a:hover {
+            text-decoration: underline;
+            color: #1557b0;
+        }
+
+        #message {
+            margin-top: 16px;
+            font-size: 14px;
+            font-weight: 600;
+            min-height: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="lang-container">
+    <select class="lang-selector" onchange="setLanguage(this.value)">
+        <option value="fr">Français</option>
+        <option value="en">English</option>
+        <option value="de">Deutsch</option>
+        <option value="it">Italiano</option>
+    </select>
+</div>
+
+<div class="container" id="auth-container">
+    <div id="login-section">
+        <h2 data-i18n="login_title">Se connecter</h2>
+        <form id="login-form">
+            <input type="text" id="login-username" data-i18n-placeholder="username_placeholder" placeholder="Nom d'utilisateur" required>
+            <input type="password" id="login-password" data-i18n-placeholder="password_placeholder" placeholder="Mot de passe" required>
+            <button type="submit" data-i18n="login_btn">Connexion</button>
+        </form>
+        <p><span data-i18n="no_account">Pas de compte ?</span> <a href="#" onclick="toggleSection('signup')" data-i18n="signup_btn">S'inscrire</a></p>
+    </div>
+
+    <div id="signup-section" class="hidden">
+        <h2 data-i18n="signup_title">Créer un compte</h2>
+        <form id="signup-form">
+            <input type="text" id="signup-username" data-i18n-placeholder="username_placeholder" placeholder="Nom d'utilisateur" required>
+            <input type="password" id="signup-password" data-i18n-placeholder="password_placeholder" placeholder="Mot de passe" required>
+            <button type="submit" data-i18n="signup_btn">S'inscrire</button>
+        </form>
+        <p><span data-i18n="has_account">Déjà un compte ?</span> <a href="#" onclick="toggleSection('login')" data-i18n="login_btn">Se connecter</a></p>
+    </div>
+
+    <p id="message"></p>
+</div>
+
+<script src="js/translations.js"></script>
+<script>
+    // Déclaration de l'URL de base de l'API en global
+    const API_URL = "https://tpi-5ter.onrender.com"; // A décommenter pour mettre sur Swisscenter
+    //const API_URL = "http://localhost:3000"; // A commenter pour mettre sur Swisscenter
+
+    // Chargement dynamique de l'image dès que le DOM est prêt
+    //document.addEventListener('DOMContentLoaded', () => {
+    //    document.querySelectorAll('.app-logo').forEach(img => {
+    //        const filename = img.getAttribute('data-filename');
+    //        if (filename) img.src = `${API_URL}/images/${filename}`;
+    //    });
+    //});
+
+    if (localStorage.getItem('token')) {
+        window.location.replace('/home.html');
+    }
+
+    function toggleSection(section) {
+        document.getElementById('login-section').classList.toggle('hidden', section === 'signup');
+        document.getElementById('signup-section').classList.toggle('hidden', section === 'login');
+        document.getElementById('message').innerText = '';
+    }
+
+    async function handleAuth(event, endpoint) {
+        event.preventDefault();
+
+        const formPrefix = endpoint === 'login' ? 'login' : 'signup';
+        const username = document.getElementById(`${formPrefix}-username`).value;
+        const password = document.getElementById(`${formPrefix}-password`).value;
+
+        try {
+            const response = await fetch(`${API_URL}/api/${endpoint}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                document.getElementById('message').style.color = '#34a853';
+
+                if (endpoint === 'login') {
+                    localStorage.setItem('token', data.token);
+
+                    if (data.language) {
+                        setLanguage(data.language);
+                    }
+
+                    document.getElementById('message').innerText = 'Succès ! Redirection...';
+                    window.location.href = 'home.html';
+                } else if (endpoint === 'signup') {
+                    document.getElementById('message').innerText = 'Compte créé avec succès ! Redirection vers la connexion...';
+                    setTimeout(() => {
+                        toggleSection('login');
+                        document.getElementById('message').style.color = '#34a853';
+                        document.getElementById('message').innerText = 'Vous pouvez maintenant vous connecter.';
+                    }, 2000);
+                }
+            } else {
+                document.getElementById('message').style.color = '#ea4335';
+                document.getElementById('message').innerText = data.error || 'Une erreur est survenue';
+            }
+        } catch (error) {
+            document.getElementById('message').style.color = '#ea4335';
+            document.getElementById('message').innerText = "Erreur de connexion au serveur.";
+            console.error(error);
+        }
+    }
+
+    document.getElementById('login-form').addEventListener('submit', (e) => handleAuth(e, 'login'));
+    document.getElementById('signup-form').addEventListener('submit', (e) => handleAuth(e, 'signup'));
+</script>
+
+</body>
+</html>
