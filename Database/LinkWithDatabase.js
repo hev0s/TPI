@@ -125,7 +125,7 @@ export async function deleteUserHasVehicule(userId, vehiculeId) {
     }
 }
 
-export async function userHasVehicule(userId) {
+export async function getUserVehicule(userId) {
     try {
         const [rows] = await db.query(
             'SELECT id, brand, model, battery_capacity, weight, base_consumption FROM user_has_vehicule WHERE user_id = ?',
@@ -134,6 +134,28 @@ export async function userHasVehicule(userId) {
         return rows;
     } catch (err) {
         console.error('Select error:', err.message);
+        throw err;
+    }
+}
+
+export async function getUserVehicleData(userId, vehiculeId = null) {
+    try {
+        let query = `
+            SELECT v.brand, v.model, v.battery_capacity, v.base_consumption, uhv.battery_health 
+            FROM user_has_vehicule uhv 
+            JOIN vehicule v ON uhv.vehicule_id = v.id 
+            WHERE uhv.user_id = ?
+        `;
+        let params = [userId];
+        if (vehiculeId) {
+            query += ` AND uhv.vehicule_id = ?`;
+            params.push(vehiculeId);
+        }
+        query += ` LIMIT 1`; //Limite à 1 véhicule
+        const [rows] = await db.query(query, params);
+        return rows[0];
+    } catch (err) {
+        console.error('Erreur lors de la récupération du véhicule:', err.message);
         throw err;
     }
 }

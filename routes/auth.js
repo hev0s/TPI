@@ -1,7 +1,18 @@
 import express from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { createUser, getUserByUsername, deleteUser, updateUsername,updateUserLanguage, setUserHasVehicule, updateUserHasVehicule, deleteUserHasVehicule } from "../Database/LinkWithDatabase.js";
+import {
+    createUser,
+    getUserByUsername,
+    deleteUser,
+    updateUsername,
+    updateUserLanguage,
+    getUserVehicule,
+    setUserHasVehicule,
+    updateUserHasVehicule,
+    deleteUserHasVehicule,
+    updateFavoritePlace, deleteFavoritePlace
+} from "../Database/LinkWithDatabase.js";
 
 const router = express.Router();
 const SALT_ROUNDS = 10;
@@ -111,6 +122,61 @@ router.delete("/user", verifyToken, async (req, res) => {
         res.status(200).json({ success: true, message: 'Compte supprimé' });
     } catch (err) {
         res.status(500).json({ error: 'Erreur lors de la suppression du compte' });
+    }
+});
+
+// --- RECEVOIR LES VEHICULES ---
+router.get("/vehicules", verifyToken, async (req, res) => {
+    try {
+        const vehicules = await getUserVehicule(req.userId);
+        res.status(200).json(vehicules);
+    } catch (err) {
+        res.status(500).json({ error: 'Erreur lors de la récupération des véhicules' });
+    }
+});
+
+// --- AJOUTER VEHICULE ---
+router.post("/setVehicule", verifyToken, async (req, res) => {
+    const { newVehicule, battery_health } = req.body;
+    if (!newVehicule) {
+        return res.status(400).json({ error: 'Nouveau véhicule requis' });
+    }
+    if (battery_health === undefined) {
+        return res.status(400).json({ error: 'L\'état de la batterie est requis' });
+    }
+    try {
+        await setUserHasVehicule(req.userId, battery_health, newVehicule);
+        res.status(200).json({ success: true, message: 'Nouveau véhicule ajouté avec succès' });
+    } catch (err) {
+        console.error("Erreur lors de l'ajout du véhicule :", err);
+        res.status(500).json({ error: 'Erreur serveur' });
+    }
+});
+
+// --- MODIFIER UN VEHICULE ---
+router.put("/updateVehicule/:id", verifyToken, async (req, res) => {
+    const vehiculeId = req.params.id;
+    const { brand, model, battery_health } = req.body;
+    if (!brand || !model || !battery_health) {
+        return res.status(400).json({ error: 'Données manquantes' });
+    }
+    try {
+        await updateUserHasVehicule(req.userId, vehiculeId, brand, model, battery_health);
+        res.status(200).json({ success: true, message: "Véhicule modifié" });
+    } catch (err) {
+        console.error("Erreur lors de la modification du véhicule :", err);
+        res.status(500).json({ error: 'Erreur lors de la modification du véhicule' });
+    }
+});
+
+// --- SUPPRIMER UN VEHICULE ---
+router.delete("/user/vehicule/:id", verifyToken, async (req, res) => {
+    const vehiculeId = req.params.id;
+    try {
+        await deleteUserHasVehicule(req.userId, vehiculeId);
+        res.status(200).json({ success: true, message: "Véhicule supprimé" });
+    } catch (err) {
+        res.status(500).json({ error: 'Erreur lors de la suppression du véhicule' });
     }
 });
 

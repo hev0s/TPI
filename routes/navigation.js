@@ -22,6 +22,7 @@ const verifyToken = (req, res, next) => {
 
 // --- ROUTES FAVORIS ---
 
+// --- RECEVOIR LES FAVORIS ---
 router.get('/favorites', verifyToken, async (req, res) => {
     try {
         const favorites = await getFavoritePlaces(req.userId);
@@ -31,6 +32,7 @@ router.get('/favorites', verifyToken, async (req, res) => {
     }
 });
 
+// --- AJOUTER UN FAVORI ---
 router.post('/favorites', verifyToken, async (req, res) => {
     const { placeName, address, latitude, longitude } = req.body;
     if (!placeName || !address || !latitude || !longitude) return res.status(400).json({ error: 'Données manquantes pour le favori' });
@@ -42,6 +44,7 @@ router.post('/favorites', verifyToken, async (req, res) => {
     }
 });
 
+// --- SUPPRIMER UN FAVORI ---
 router.delete('/favorites/:id', verifyToken, async (req, res) => {
     const placeId = req.params.id;
     try {
@@ -52,6 +55,7 @@ router.delete('/favorites/:id', verifyToken, async (req, res) => {
     }
 });
 
+// --- MODIFIER UN FAVORI ---
 router.put('/favorites/:id', verifyToken, async (req, res) => {
     const placeId = req.params.id;
     const { placeName, address, latitude, longitude } = req.body;
