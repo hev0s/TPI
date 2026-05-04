@@ -116,9 +116,9 @@ export async function setUserHasVehicule(userId, vehiculeId, battery_health, tyr
     }
 }
 
-export async function updateUserHasVehicule(userId, vehiculeId, battery_health, tyre) {
+export async function updateUserHasVehicule(userId, vehiculeId, carId, battery_health, tyre) {
     try {
-        await db.query('UPDATE user_has_vehicule SET battery_health = ?,  tyre=? WHERE user_id = ? AND vehicule_id = ?', [battery_health, tyre, userId, vehiculeId]);
+        await db.query('UPDATE user_has_vehicule SET vehiculeId=?, battery_health = ?,  tyre=? WHERE user_id = ? AND vehicule_id = ?', [carId, battery_health, tyre, userId, vehiculeId]);
     } catch (err) {
         console.error('Update error:', err.message);
     }

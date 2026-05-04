@@ -172,15 +172,15 @@ router.put("/user/car", verifyToken, async (req, res) => {
 // --- MODIFIER UN VEHICULE EXISTANT ---
 router.put("/updateVehicule/:id", verifyToken, async (req, res) => {
     const vehiculeId = req.params.id;
-    const { battery_health, tireType } = req.body;
+    const {carId, battery_health, tireType } = req.body;
 
-    if (battery_health === undefined || !tireType) {
+    if (!carId || battery_health === undefined || !tireType) {
         return res.status(400).json({ error: 'Données manquantes' });
     }
 
     try {
         // On passe l'ID du véhicule, la batterie et le type de pneu à la fonction de mise à jour
-        await updateUserHasVehicule(req.userId, vehiculeId, battery_health, tireType);
+        await updateUserHasVehicule(req.userId, vehiculeId, carId, battery_health, tireType);
         res.status(200).json({ success: true, message: "Véhicule modifié" });
     } catch (err) {
         console.error("Erreur lors de la modification du véhicule :", err);
