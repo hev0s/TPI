@@ -288,6 +288,7 @@
                     }
 
                     initMap();
+                    loadUserCarsForNav(); // NOUVEAU : Chargement de la voiture
                 } else {
                     localStorage.removeItem('token');
                     window.location.replace('index.html');
@@ -304,6 +305,13 @@
     <div id="header-controls" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
         <button id="btn-settings" onclick="window.location.href='settings.html'" style="background: transparent; color: #5f6368; padding: 5px; font-size: 20px; box-shadow: none; min-width: auto;">⚙️</button>
         <h3 style="margin: 0; color: #202124;">DuckyVolt</h3>
+    </div>
+
+    <!-- Sélecteur de véhicule -->
+    <div class="input-group" id="car-selector-container" style="display: none; margin-bottom: 15px;">
+        <select id="car-selector" style="padding: 12px; border-radius: 12px; border: 1px solid #dadce0; width: 100%; font-size: 14px; background-color: rgba(241, 243, 244, 0.7); color: #3c4043; outline: none;">
+            <option value="">Chargement de vos véhicules...</option>
+        </select>
     </div>
 
     <div class="input-group" id="waypoints-container">
@@ -364,6 +372,64 @@
     let currentSpeedLimit = null;
     let lastSpeedLimitCheckTime = 0;
     let currentSpeedUnit = 'km/h'; // Unité dynamique par défaut
+
+    // Variables et fonction pour les véhicules
+    let selectedCarId = localStorage.getItem('selectedCarId') || null;
+
+    async function loadUserCarsForNav() {
+        try {
+            const res = await fetch(`${API_URL}/api/vehicules`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (res.ok) {
+                const cars = await res.json();
+                const carSelector = document.getElementById('car-selector');
+                const carContainer = document.getElementById('car-selector-container');
+
+                if (cars.length > 1) { // S'affiche si et seulement si PLUS d'un véhicule
+                    carContainer.style.display = 'block';
+                    carSelector.innerHTML = '';
+
+                    cars.forEach(car => {
+                        const option = document.createElement('option');
+                        option.value = car.id;
+                        option.text = `${car.brand} ${car.model} (${car.battery_health}%)`;
+                        carSelector.appendChild(option);
+                    });
+
+                    if (selectedCarId && cars.some(c => c.id == selectedCarId)) {
+                        carSelector.value = selectedCarId;
+                    } else {
+                        selectedCarId = cars[0].id;
+                        carSelector.value = selectedCarId;
+                        localStorage.setItem('selectedCarId', selectedCarId);
+                    }
+
+                    carSelector.addEventListener('change', (e) => {
+                        selectedCarId = e.target.value;
+                        localStorage.setItem('selectedCarId', selectedCarId);
+                        console.log("Véhicule sélectionné pour le trajet :", selectedCarId);
+                    });
+                } else if (cars.length === 1) { // Un seul véhicule, on l'enregistre mais on cache le menu
+                    carContainer.style.display = 'none';
+                    carSelector.innerHTML = ''; // On peuple quand même le menu pour le check de taille plus tard
+                    const option = document.createElement('option');
+                    option.value = cars[0].id;
+                    carSelector.appendChild(option);
+
+                    selectedCarId = cars[0].id;
+                    localStorage.setItem('selectedCarId', selectedCarId);
+                } else {
+                    carContainer.style.display = 'none';
+                    selectedCarId = null;
+                    localStorage.removeItem('selectedCarId');
+                }
+            }
+        } catch (err) {
+            console.error("Erreur lors du chargement des véhicules :", err);
+        }
+    }
 
     async function fetchSpeedLimit(lat, lng) {
         const query = `
@@ -532,7 +598,7 @@
                     }
 
                     if (!userMarker) {
-                        // NOUVEAU STYLE : Marqueur Google Maps
+                        // Style : Marqueur Google Maps
                         const userIcon = L.divIcon({
                             className: 'user-marker',
                             html: `
@@ -847,6 +913,7 @@
         requestWakeLock();
 
         document.getElementById('header-controls').style.display = 'none';
+        document.getElementById('car-selector-container').style.display = 'none';
         document.getElementById('waypoints-container').style.display = 'none';
         document.getElementById('btn-add-stop').style.display = 'none';
         document.getElementById('main-buttons').style.display = 'none';
@@ -895,6 +962,13 @@
         mapDiv.style.transform = `rotate(0deg)`;
 
         document.getElementById('header-controls').style.display = 'flex';
+
+        // Seulement réafficher le sélecteur si on avait sélectionné un véhicule et qu'on en a plus d'un
+        const carSelector = document.getElementById('car-selector');
+        if (selectedCarId && carSelector && carSelector.options.length > 1) {
+            document.getElementById('car-selector-container').style.display = 'block';
+        }
+
         document.getElementById('waypoints-container').style.display = 'flex';
         document.getElementById('btn-add-stop').style.display = 'block';
         document.getElementById('main-buttons').style.display = 'grid';
