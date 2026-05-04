@@ -12,9 +12,7 @@ import {
     updateUserHasVehicule,
     deleteUserHasVehicule,
     updateFavoritePlace,
-    deleteFavoritePlace,
-    // 👇 NOUVELLE FONCTION À CRÉER DANS LinkWithDatabase.js 👇
-    updateUserCar
+    deleteFavoritePlace
 } from "../Database/LinkWithDatabase.js";
 
 const router = express.Router();
@@ -138,7 +136,7 @@ router.get("/vehicules", verifyToken, async (req, res) => {
     }
 });
 
-// --- AJOUTER VEHICULE EXISTANT (Garde ton ancienne route au cas où) ---
+// --- AJOUTER VEHICULE ---
 router.post("/setVehicule", verifyToken, async (req, res) => {
     const { newVehicule, battery_health } = req.body;
     if (!newVehicule) {
@@ -156,34 +154,15 @@ router.post("/setVehicule", verifyToken, async (req, res) => {
     }
 });
 
-// 👇 NOUVELLE ROUTE : DEFINIR/METTRE À JOUR LE VÉHICULE ET LES PNEUS (Depuis settings.html) 👇
-router.put("/user/car", verifyToken, async (req, res) => {
-    const { carId, tireType } = req.body;
-
-    // Vérification des données entrantes
-    if (!carId || !tireType) {
-        return res.status(400).json({ error: 'Le modèle du véhicule et le type de pneu sont obligatoires.' });
-    }
-
-    try {
-        // req.userId est généré par ton middleware verifyToken
-        await updateUserCar(req.userId, carId, tireType);
-        res.status(200).json({ success: true, message: 'Véhicule et pneus mis à jour avec succès' });
-    } catch (err) {
-        console.error("Erreur lors de la mise à jour du véhicule :", err);
-        res.status(500).json({ error: 'Erreur lors de la mise à jour du véhicule' });
-    }
-});
-
 // --- MODIFIER UN VEHICULE ---
 router.put("/updateVehicule/:id", verifyToken, async (req, res) => {
     const vehiculeId = req.params.id;
-    const { brand, model, battery_health } = req.body;
-    if (!brand || !model || !battery_health) {
+    const { brand, model, battery_health, tyre } = req.body;
+    if (!brand || !model || !battery_health || !tyre) {
         return res.status(400).json({ error: 'Données manquantes' });
     }
     try {
-        await updateUserHasVehicule(req.userId, vehiculeId, brand, model, battery_health);
+        await updateUserHasVehicule(req.userId, vehiculeId, brand, model, battery_health, tyre);
         res.status(200).json({ success: true, message: "Véhicule modifié" });
     } catch (err) {
         console.error("Erreur lors de la modification du véhicule :", err);
