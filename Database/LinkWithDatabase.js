@@ -101,17 +101,17 @@ export async function getAllVehicules(vehiculeId, brand, model) {
     }
 }
 
-export async function setUserHasVehicule(userId, vehiculeId, battery_health) {
+export async function setUserHasVehicule(userId, vehiculeId, battery_health, tyre) {
     try {
-        await db.query('INSERT INTO user_has_vehicule (user_id, vehicule_id, battery_health) VALUES (?,?,?)', [userId, vehiculeId, battery_health]);
+        await db.query('INSERT INTO user_has_vehicule (user_id, vehicule_id, battery_health, tyre) VALUES (?,?,?,?)', [userId, vehiculeId, battery_health, tyre]);
     } catch (err) {
         console.error('Insert error:', err.message);
     }
 }
 
-export async function updateUserHasVehicule(userId, vehiculeId, battery_health) {
+export async function updateUserHasVehicule(userId, vehiculeId, battery_health, tyre) {
     try {
-        await db.query('UPDATE user_has_vehicule SET battery_health = ? WHERE user_id = ? AND vehicule_id = ?', [battery_health, userId, vehiculeId]);
+        await db.query('UPDATE user_has_vehicule SET battery_health = ?,  tyre=? WHERE user_id = ? AND vehicule_id = ?', [battery_health, tyre, userId, vehiculeId]);
     } catch (err) {
         console.error('Update error:', err.message);
     }
@@ -128,7 +128,7 @@ export async function deleteUserHasVehicule(userId, vehiculeId) {
 export async function getUserVehicule(userId) {
     try {
         const [rows] = await db.query(
-            'SELECT id, brand, model, battery_capacity, weight, base_consumption FROM user_has_vehicule WHERE user_id = ?',
+            'SELECT id, brand, model, battery_capacity, weight, base_consumption, tyre, air_drag FROM user_has_vehicule WHERE user_id = ?',
             [userId]
         );
         return rows;
@@ -141,7 +141,7 @@ export async function getUserVehicule(userId) {
 export async function getUserVehicleData(userId, vehiculeId = null) {
     try {
         let query = `
-            SELECT v.brand, v.model, v.battery_capacity, v.base_consumption, uhv.battery_health 
+            SELECT v.brand, v.model, v.battery_capacity, v.base_consumption, uhv.battery_health, uhv.tyre, v,air_drag
             FROM user_has_vehicule uhv 
             JOIN vehicule v ON uhv.vehicule_id = v.id 
             WHERE uhv.user_id = ?

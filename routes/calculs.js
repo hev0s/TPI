@@ -23,8 +23,9 @@ const verifyToken = (req, res, next) => {
 
 const RHO_AIR = 1.225;
 const GRAVITE = 9.81;
-const CRR_ETE = 0.01;
-const CRR_HIVERS = 0.23;
+const CRR_ETE = 0.010;
+const CRR_HIVERS = 0.012;
+const CRR_ALL_SEASON = 0.011;
 
 
 /**
@@ -43,7 +44,7 @@ const CRR_HIVERS = 0.23;
  * @var {number} surfaceFrontale - Surface frontale "S" ou "A" (en m^2, ex: 2.2) --> Négligé pour le moment
  * @var {number} crr - Coefficient de résistance au roulement (ex: 0.01 pour pneus été) --> A modifier en BDD (pneu été/hivers, puis constante attribuée)
  * @var {number} masse - Masse totale du véhicule en charge (en kg)
- * @var {number} rendementTraction - Efficacité Batterie -> Roues (ex: 0.85) --> Soit faire une moyenne soit inégrer en BDD pour chaque véhicules
+ * @var {number} rendementTraction - Efficacité Batterie -> Roues (ex: 0.85) --> Soit faire une moyenne (chois fait actuellement) soit inégrer en BDD pour chaque véhicules
  * @var {number} rendementRegen - Efficacité Roues -> Batterie au freinage (ex: 0.65) --> Soit faire une moyenne soit inégrer en BDD pour chaque véhicules
  * @var {number} puissanceAcc - Puissance des accessoires: chauffage, écrans (en Watts) --> On va négliger cette partie pour le moment
  */
@@ -145,3 +146,5 @@ const CRR_HIVERS = 0.23;
  * // Borner le résultat :
  * // socFinal = Math.max(0, Math.min(100, socFinal))
  */
+
+
