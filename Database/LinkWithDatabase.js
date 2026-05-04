@@ -135,7 +135,10 @@ export async function deleteUserHasVehicule(userId, vehiculeId) {
 export async function getUserVehicule(userId) {
     try {
         const [rows] = await db.query(
-            'SELECT id, brand, model, battery_capacity, weight, base_consumption, tyre, air_drag FROM user_has_vehicule WHERE user_id = ?',
+            `SELECT v.id, v.brand, v.model, uhv.battery_health, uhv.tyre 
+             FROM user_has_vehicule uhv 
+             JOIN vehicule v ON uhv.vehicule_id = v.id 
+             WHERE uhv.user_id = ?`,
             [userId]
         );
         return rows;
