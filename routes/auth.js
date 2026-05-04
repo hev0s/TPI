@@ -172,7 +172,7 @@ router.put("/user/car", verifyToken, async (req, res) => {
 // --- MODIFIER UN VEHICULE EXISTANT ---
 router.put("/updateVehicule/:id", verifyToken, async (req, res) => {
     const entryId = req.params.id; // id de l'ancien véhicule
-    const {carId, battery_health, tireType } = req.body;
+    const { carId, battery_health, tireType } = req.body; // carId est le nouveau véhicule
 
     if (!carId || battery_health === undefined || !tireType) {
         return res.status(400).json({ error: 'Données manquantes' });

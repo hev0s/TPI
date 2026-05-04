@@ -120,9 +120,10 @@ export async function updateUserHasVehicule(userId, entryId, carId, battery_heal
     // entryId est l'id de l'ancien véhicule
     // carId est l'id du nouveau véhicule
     try {
-        await db.query('UPDATE user_has_vehicule SET vehiculeId=?, battery_health = ?,  tyre=? WHERE user_id = ? AND vehicule_id = ?', [carId, battery_health, tyre, userId, entryId]);
+        await db.query('UPDATE user_has_vehicule SET vehicule_id=?, battery_health = ?,  tyre=? WHERE user_id = ? AND vehicule_id = ?', [carId, battery_health, tyre, userId, entryId]);
     } catch (err) {
         console.error('Update error:', err.message);
+        throw err;
     }
 }
 
