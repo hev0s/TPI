@@ -127,7 +127,17 @@ router.delete("/user", verifyToken, async (req, res) => {
     }
 });
 
-// --- RECHERCHER UN VÉHICULE ---
+// --- RECEVOIR LES VEHICULES DE L'UTILISATEUR ---
+router.get("/vehicules", verifyToken, async (req, res) => {
+    try {
+        const vehicules = await getUserVehicule(req.userId);
+        res.status(200).json(vehicules);
+    } catch (err) {
+        res.status(500).json({ error: 'Erreur lors de la récupération des véhicules' });
+    }
+});
+
+// --- RECHERCHER UN VÉHICULE (AUTOCOMPLÉTION) ---
 router.get("/vehicules/search", verifyToken, async (req, res) => {
     const query = req.query.q;
     if (!query || query.length < 3) {
@@ -141,12 +151,12 @@ router.get("/vehicules/search", verifyToken, async (req, res) => {
     }
 });
 
-// --- ENREGISTRER LE VÉHICULE DE L'UTILISATEUR ---
+// --- ENREGISTRER UN NOUVEAU VÉHICULE ---
 router.put("/user/car", verifyToken, async (req, res) => {
-    const { carId, tireType } = req.body;
-    // On fixe battery_health à 100 par défaut si non fourni
-    const battery_health = 100;
+    const { carId, tireType, battery_health } = req.body;
 
+    // On utilise battery_health si fourni, sinon 100 par défaut
+    const finalBatteryHealth = battery_health !== undefined ? battery_health : 100;
     if (!carId || !tireType) {
         return res.status(400).json({ error: 'Données manquantes' });
     }
@@ -159,15 +169,18 @@ router.put("/user/car", verifyToken, async (req, res) => {
     }
 });
 
-// --- MODIFIER UN VEHICULE ---
+// --- MODIFIER UN VEHICULE EXISTANT ---
 router.put("/updateVehicule/:id", verifyToken, async (req, res) => {
     const vehiculeId = req.params.id;
-    const { brand, model, battery_health, tyre } = req.body;
-    if (!brand || !model || !battery_health || !tyre) {
+    const { battery_health, tireType } = req.body;
+
+    if (battery_health === undefined || !tireType) {
         return res.status(400).json({ error: 'Données manquantes' });
     }
+
     try {
-        await updateUserHasVehicule(req.userId, vehiculeId, brand, model, battery_health, tyre);
+        // On passe l'ID du véhicule, la batterie et le type de pneu à la fonction de mise à jour
+        await updateUserHasVehicule(req.userId, vehiculeId, battery_health, tireType);
         res.status(200).json({ success: true, message: "Véhicule modifié" });
     } catch (err) {
         console.error("Erreur lors de la modification du véhicule :", err);
