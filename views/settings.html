@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DuckyRoad - Paramètres</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: linear-gradient(135deg, #e5e3df 0%, #f8f9fa 100%);
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+            margin: 0;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: 24px;
+            padding: 30px;
+            width: 100%;
+            max-width: 500px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            margin-top: 20px;
+            box-sizing: border-box;
+        }
+
+        .lang-selector {
+            padding: 8px 12px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(218, 220, 224, 0.6);
+            font-size: 14px;
+            color: #202124;
+            cursor: pointer;
+            outline: none;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        h2 { margin-top: 0; color: #202124; display: flex; align-items: center; gap: 10px; }
+        h3 { border-bottom: 1px solid rgba(218, 220, 224, 0.6); padding-bottom: 10px; color: #3c4043; margin-top: 30px; }
+
+        /* J'ai groupé input et .form-control pour appliquer le même style aux <select> */
+        input, .form-control {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 1px solid rgba(218, 220, 224, 0.6);
+            border-radius: 12px;
+            box-sizing: border-box;
+            font-size: 15px;
+            background-color: rgba(255, 255, 255, 0.6);
+            transition: all 0.2s ease;
+            color: #202124;
+            font-family: inherit;
+        }
+
+        input:focus, .form-control:focus {
+            outline: none;
+            border-color: #1a73e8;
+            background-color: white;
+            box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.2);
+        }
+
+        button {
+            padding: 12px 20px;
+            cursor: pointer;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            width: 100%;
+            transition: transform 0.1s, box-shadow 0.2s;
+        }
+
+        button:active { transform: scale(0.97); }
+
+        .btn-primary { background: #1a73e8; color: white; box-shadow: 0 4px 12px rgba(26, 115, 232, 0.2); }
+        .btn-primary:hover { box-shadow: 0 6px 16px rgba(26, 115, 232, 0.3); }
+
+        .btn-danger { background: #ea4335; color: white; margin-top: 10px; box-shadow: 0 4px 12px rgba(234, 67, 53, 0.2); }
+        .btn-danger:hover { box-shadow: 0 6px 16px rgba(234, 67, 53, 0.3); }
+
+        .btn-secondary {
+            background: rgba(241, 243, 244, 0.8);
+            color: #3c4043;
+            margin-bottom: 20px;
+            display: inline-block;
+            border: 1px solid rgba(218, 220, 224, 0.6);
+        }
+
+        .btn-small { width: auto; padding: 8px 12px; font-size: 13px; margin:0; }
+
+        .fav-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 10px; border-bottom: 1px solid rgba(241, 243, 244, 0.6); }
+        .fav-item:last-child { border-bottom: none; }
+        .fav-info strong { color: #202124; display: block; }
+        .fav-info span { font-size: 13px; color: #5f6368; }
+        .msg { font-size: 14px; margin-top: 5px; }
+
+        .form-fav-container, .form-car-container {
+            background: rgba(248, 249, 250, 0.5);
+            padding: 15px;
+            border-radius: 16px;
+            border: 1px solid rgba(218, 220, 224, 0.4);
+        }
+
+        .autocomplete-wrapper { position: relative; width: 100%; }
+        .autocomplete-list {
+            position: absolute; top: 100%; left: 0; right: 0;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(218, 220, 224, 0.6);
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+            z-index: 2000; list-style: none; margin: -10px 0 15px 0; padding: 0; max-height: 200px; overflow-y: auto;
+        }
+        .autocomplete-list li { padding: 12px 16px; cursor: pointer; border-bottom: 1px solid rgba(241, 243, 244, 0.6); font-size: 14px; color: #3c4043; line-height: 1.4; }
+        .autocomplete-list li:hover { background-color: rgba(248, 249, 250, 0.8); color: #1a73e8; }
+        .autocomplete-list li:last-child { border-bottom: none; }
+
+        @media (max-width: 600px) {
+            body { padding: 15px 10px; }
+            .container { padding: 20px 15px; }
+            .fav-item { flex-direction: column; align-items: flex-start; gap: 10px; }
+        }
+    </style>
+</head>
+<body style="display: none;" id="main-body">
+
+<script>
+    const API_URL = "https://pretpi-navigation.onrender.com";
+    const token = localStorage.getItem('token');
+
+    if (!token) {
+        window.location.replace('index.html');
+    } else {
+        fetch(`${API_URL}/api/verify`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        }).then(res => {
+            if (res.ok) {
+                document.getElementById('main-body').style.display = 'block';
+                loadFavorites();
+                // Tu pourrais aussi appeler loadCar() ici si tu crées une route GET pour récupérer le véhicule sauvegardé
+            } else {
+                window.location.replace('index.html');
+            }
+        });
+    }
+</script>
+
+<div class="container">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <button class="btn-secondary" style="width: auto;" onclick="window.location.href='home.html'" data-i18n="back_map">⬅ Retour à la carte</button>
+        <select class="lang-selector" onchange="changeLanguageAndUpdate(this.value)">
+            <option value="fr">Français</option>
+            <option value="en">English</option>
+            <option value="de">Deutsch</option>
+        </select>
+    </div>
+
+    <h2 data-i18n="settings_title">⚙️ Paramètres du compte</h2>
+
+    <h3 data-i18n="profile_title">Mon Profil</h3>
+    <input type="text" id="new-username" data-i18n-placeholder="new_username" placeholder="Nouveau nom d'utilisateur">
+    <button class="btn-primary" onclick="updateUsername()" data-i18n="update_pseudo">Mettre à jour le pseudo</button>
+    <p id="msg-profile" class="msg"></p>
+
+    <h3 data-i18n="fav_title">⭐ Mes Lieux Favoris</h3>
+    <div id="favorites-list" style="margin-bottom: 20px;">
+        <p style="color: #5f6368; font-size: 14px;">Chargement...</p>
+    </div>
+
+    <div class="form-fav-container">
+        <h4 id="form-fav-title" style="margin-top: 0; margin-bottom: 10px;" data-i18n="add_fav">Ajouter un favori</h4>
+        <input type="text" id="fav-label" data-i18n-placeholder="fav_name" placeholder="Nom (ex: Maison, Travail)">
+
+        <div class="autocomplete-wrapper">
+            <input type="text" id="fav-address" data-i18n-placeholder="fav_address" placeholder="Adresse complète" autocomplete="off">
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+            <button id="btn-save-fav" class="btn-primary" onclick="saveFavorite()" data-i18n="btn_add">Ajouter</button>
+            <button id="btn-cancel-edit" class="btn-secondary" style="display: none; margin-bottom: 0;" onclick="cancelEdit()">Annuler</button>
+        </div>
+        <p id="msg-fav" class="msg"></p>
+    </div>
+
+    <!-- NOUVELLE SECTION : MON VÉHICULE -->
+    <h3 data-i18n="car_title">🚗 Mon Véhicule</h3>
+    <div class="form-car-container" style="margin-bottom: 30px;">
+
+        <label for="car-select" style="font-size: 14px; color: #3c4043; margin-bottom: 5px; display: block; font-weight: 500;">Modèle du véhicule</label>
+        <select id="car-select" class="form-control">
+            <option value="" disabled selected>Choisir une voiture...</option>
+            <!-- Ces options peuvent être codées en dur ou générées dynamiquement en JS -->
+            <option value="peugeot_208">Peugeot 208</option>
+            <option value="renault_clio">Renault Clio</option>
+            <option value="vw_golf">Volkswagen Golf</option>
+            <option value="toyota_yaris">Toyota Yaris</option>
+            <option value="tesla_model_3">Tesla Model 3</option>
+        </select>
+
+        <label for="tire-select" style="font-size: 14px; color: #3c4043; margin-bottom: 5px; display: block; font-weight: 500;">Type de pneus</label>
+        <select id="tire-select" class="form-control">
+            <option value="summer">Pneus Été (Summer)</option>
+            <option value="winter">Pneus Hiver (Winter)</option>
+            <option value="all_season">Toutes saisons (All season)</option>
+        </select>
+
+        <button class="btn-primary" onclick="saveCar()" data-i18n="btn_save_car">Enregistrer le véhicule</button>
+        <p id="msg-car" class="msg"></p>
+    </div>
+    <!-- FIN SECTION VÉHICULE -->
+
+    <h3 style="color: #ea4335; border-color: rgba(234, 67, 53, 0.2);" data-i18n="danger_zone">Zone de danger</h3>
+    <button class="btn-danger" onclick="deleteAccount()" data-i18n="delete_account">🗑️ Supprimer mon compte définitivement</button>
+</div>
+
+<script src="js/translations.js"></script>
+<script>
+    async function changeLanguageAndUpdate(lang) {
+        setLanguage(lang);
+        try {
+            await fetch(`${API_URL}/api/user/language`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ language: lang })
+            });
+        } catch (err) {
+            console.error("Erreur lors de la sauvegarde de la langue", err);
+        }
+    }
+
+    // --- GESTION DU PROFIL ---
+    async function updateUsername() {
+        const newUsername = document.getElementById('new-username').value;
+        const msgBox = document.getElementById('msg-profile');
+        if(!newUsername) return;
+
+        try {
+            const res = await fetch(`${API_URL}/api/user/username`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ newUsername })
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                msgBox.style.color = "green";
+                msgBox.innerText = "Pseudo mis à jour !";
+            } else {
+                msgBox.style.color = "red";
+                msgBox.innerText = data.error || "Erreur lors de la mise à jour.";
+            }
+        } catch (err) {
+            msgBox.style.color = "red"; msgBox.innerText = "Erreur de connexion.";
+        }
+    }
+
+    async function deleteAccount() {
+        if(!confirm("Êtes-vous sûr de vouloir supprimer DÉFINITIVEMENT votre compte ? Cette action est irréversible.")) return;
+
+        try {
+            const res = await fetch(`${API_URL}/api/user`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                localStorage.removeItem('token');
+                window.location.replace('index.html');
+            } else {
+                alert("Erreur lors de la suppression du compte.");
+            }
+        } catch (err) {
+            alert("Erreur de connexion.");
+        }
+    }
+
+    // --- GESTION DU VÉHICULE ---
+    async function saveCar() {
+        const carId = document.getElementById('car-select').value;
+        const tireType = document.getElementById('tire-select').value;
+        const msgBox = document.getElementById('msg-car');
+
+        if(!carId || !tireType) {
+            msgBox.style.color = "red";
+            msgBox.innerText = "Veuillez sélectionner un véhicule et un type de pneu.";
+            return;
+        }
+
+        msgBox.style.color = "#5f6368";
+        msgBox.innerText = "Enregistrement en cours...";
+
+        try {
+            // Assure-toi de créer cette route (ex: PUT /api/user/car) dans ton backend Node.js !
+            const res = await fetch(`${API_URL}/api/user/car`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ carId, tireType })
+            });
+
+            if (res.ok) {
+                msgBox.style.color = "green";
+                msgBox.innerText = "Véhicule enregistré avec succès !";
+            } else {
+                msgBox.style.color = "red";
+                msgBox.innerText = "Erreur lors de l'enregistrement.";
+            }
+        } catch (err) {
+            msgBox.style.color = "red";
+            msgBox.innerText = "Erreur de connexion avec le serveur.";
+        }
+    }
+
+    // --- AUTOCOMPLÉTION DES ADRESSES ---
+    let autocompleteTimeout = null;
+
+    document.getElementById('fav-address').addEventListener('input', function(e) {
+        const input = e.target;
+        const val = input.value;
+
+        if (!val || val.length < 3) {
+            closeAllLists();
+            return;
+        }
+
+        clearTimeout(autocompleteTimeout);
+
+        autocompleteTimeout = setTimeout(async () => {
+            try {
+                let requestBody = { text: val };
+
+                const response = await fetch(`${API_URL}/api/navigation/autocomplete`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify(requestBody)
+                });
+
+                if (response.ok) {
+                    const suggestions = await response.json();
+                    closeAllLists();
+
+                    if (suggestions.length === 0) return;
+
+                    const list = document.createElement('ul');
+                    list.setAttribute('class', 'autocomplete-list');
+                    input.parentNode.appendChild(list);
+
+                    suggestions.forEach(suggest => {
+                        const cleanSuggest = suggest.startsWith('⭐') ? suggest.split('(')[1].replace(')', '') : suggest;
+                        const item = document.createElement('li');
+                        const cleanText = cleanSuggest.split(',').slice(0, 3).join(',');
+                        item.innerText = cleanText;
+
+                        item.addEventListener('click', () => {
+                            input.value = cleanText;
+                            closeAllLists();
+                        });
+                        list.appendChild(item);
+                    });
+                }
+            } catch (err) { console.error(err); }
+        }, 400);
+    });
+
+    function closeAllLists() {
+        const lists = document.querySelectorAll('.autocomplete-list');
+        lists.forEach(l => l.remove());
+    }
+
+    document.addEventListener('click', function(e) {
+        if (e.target.id !== 'fav-address') {
+            closeAllLists();
+        }
+    });
+
+    // --- GESTION DES FAVORIS ---
+    let editFavoriteId = null;
+
+    async function loadFavorites() {
+        const listContainer = document.getElementById('favorites-list');
+        try {
+            const res = await fetch(`${API_URL}/api/navigation/favorites`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const favorites = await res.json();
+                listContainer.innerHTML = '';
+
+                if(favorites.length === 0) {
+                    listContainer.innerHTML = '<p style="color: #5f6368; font-size: 14px;">Aucun favori enregistré.</p>';
+                    return;
+                }
+
+                favorites.forEach(fav => {
+                    const safeLabel = fav.label.replace(/'/g, "\\'");
+                    const safeAddress = fav.address.replace(/'/g, "\\'");
+                    listContainer.innerHTML += `
+                        <div class="fav-item">
+                            <div class="fav-info">
+                                <strong>${fav.label}</strong>
+                                <span>${fav.address}</span>
+                            </div>
+                            <div style="display: flex; gap: 5px;">
+                                <button class="btn-secondary btn-small" onclick="startEdit(${fav.id}, '${safeLabel}', '${safeAddress}')">✏️</button>
+                                <button class="btn-danger btn-small" onclick="deleteFavorite(${fav.id})">X</button>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+        } catch (err) {
+            listContainer.innerHTML = '<p style="color: red;">Erreur de chargement.</p>';
+        }
+    }
+
+    function startEdit(id, label, address) {
+        editFavoriteId = id;
+        document.getElementById('form-fav-title').innerText = "Modifier le favori";
+        document.getElementById('fav-label').value = label;
+        document.getElementById('fav-address').value = address;
+        document.getElementById('btn-save-fav').innerText = "Mettre à jour";
+        document.getElementById('btn-cancel-edit').style.display = "block";
+        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+    }
+
+    function cancelEdit() {
+        editFavoriteId = null;
+        document.getElementById('form-fav-title').innerText = "Ajouter un favori";
+        document.getElementById('fav-label').value = '';
+        document.getElementById('fav-address').value = '';
+        document.getElementById('btn-save-fav').innerText = "Ajouter";
+        document.getElementById('btn-cancel-edit').style.display = "none";
+        document.getElementById('msg-fav').innerText = "";
+    }
+
+    async function saveFavorite() {
+        const label = document.getElementById('fav-label').value;
+        const address = document.getElementById('fav-address').value;
+        const msgBox = document.getElementById('msg-fav');
+
+        if(!label || !address) {
+            msgBox.style.color = "red"; msgBox.innerText = "Veuillez remplir tous les champs.";
+            return;
+        }
+
+        msgBox.style.color = "#5f6368"; msgBox.innerText = "Recherche de l'adresse...";
+
+        try {
+            const geoRes = await fetch(`${API_URL}/api/navigation/geocode`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ address })
+            });
+
+            if (!geoRes.ok) {
+                msgBox.style.color = "red"; msgBox.innerText = "Adresse introuvable.";
+                return;
+            }
+
+            const coords = await geoRes.json();
+            const payload = {
+                placeName: label,
+                address: address,
+                latitude: coords.lat,
+                longitude: coords.lon
+            };
+
+            const method = editFavoriteId ? 'PUT' : 'POST';
+            const url = editFavoriteId ? `${API_URL}/api/navigation/favorites/${editFavoriteId}` : `${API_URL}/api/navigation/favorites`;
+
+            const saveRes = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(payload)
+            });
+
+            if (saveRes.ok) {
+                cancelEdit();
+                loadFavorites();
+            } else {
+                msgBox.style.color = "red"; msgBox.innerText = "Erreur lors de la sauvegarde.";
+            }
+        } catch (err) {
+            msgBox.style.color = "red"; msgBox.innerText = "Erreur serveur.";
+        }
+    }
+
+    async function deleteFavorite(id) {
+        if(!confirm("Supprimer ce favori ?")) return;
+        try {
+            const res = await fetch(`${API_URL}/api/navigation/favorites/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if(res.ok) {
+                if(editFavoriteId === id) cancelEdit();
+                loadFavorites();
+            }
+        } catch (err) {
+            console.error("Erreur de suppression", err);
+        }
+    }
+</script>
+</body>
+</html>

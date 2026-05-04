@@ -11,7 +11,10 @@ import {
     setUserHasVehicule,
     updateUserHasVehicule,
     deleteUserHasVehicule,
-    updateFavoritePlace, deleteFavoritePlace
+    updateFavoritePlace,
+    deleteFavoritePlace,
+    // 👇 NOUVELLE FONCTION À CRÉER DANS LinkWithDatabase.js 👇
+    updateUserCar
 } from "../Database/LinkWithDatabase.js";
 
 const router = express.Router();
@@ -135,7 +138,7 @@ router.get("/vehicules", verifyToken, async (req, res) => {
     }
 });
 
-// --- AJOUTER VEHICULE ---
+// --- AJOUTER VEHICULE EXISTANT (Garde ton ancienne route au cas où) ---
 router.post("/setVehicule", verifyToken, async (req, res) => {
     const { newVehicule, battery_health } = req.body;
     if (!newVehicule) {
@@ -150,6 +153,25 @@ router.post("/setVehicule", verifyToken, async (req, res) => {
     } catch (err) {
         console.error("Erreur lors de l'ajout du véhicule :", err);
         res.status(500).json({ error: 'Erreur serveur' });
+    }
+});
+
+// 👇 NOUVELLE ROUTE : DEFINIR/METTRE À JOUR LE VÉHICULE ET LES PNEUS (Depuis settings.html) 👇
+router.put("/user/car", verifyToken, async (req, res) => {
+    const { carId, tireType } = req.body;
+
+    // Vérification des données entrantes
+    if (!carId || !tireType) {
+        return res.status(400).json({ error: 'Le modèle du véhicule et le type de pneu sont obligatoires.' });
+    }
+
+    try {
+        // req.userId est généré par ton middleware verifyToken
+        await updateUserCar(req.userId, carId, tireType);
+        res.status(200).json({ success: true, message: 'Véhicule et pneus mis à jour avec succès' });
+    } catch (err) {
+        console.error("Erreur lors de la mise à jour du véhicule :", err);
+        res.status(500).json({ error: 'Erreur lors de la mise à jour du véhicule' });
     }
 });
 
