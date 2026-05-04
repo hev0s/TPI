@@ -12,7 +12,8 @@ import {
     updateUserHasVehicule,
     deleteUserHasVehicule,
     updateFavoritePlace,
-    deleteFavoritePlace
+    deleteFavoritePlace,
+    searchVehicles
 } from "../Database/LinkWithDatabase.js";
 
 const router = express.Router();
