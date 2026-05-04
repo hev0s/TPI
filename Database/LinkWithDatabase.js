@@ -89,23 +89,30 @@ export async function updateFavoritePlace(userId, placeId, placeName, address, l
     }
 }
 
-export async function getAllVehicules(vehiculeId, brand, model) {
+export async function searchVehicles(query) {
     try {
+        // Recherche dans la marque ou le modèle
         const [rows] = await db.query(
-            'SELECT id, brand, model FROM vehicules WHERE id = ? OR brand = ? OR model = ?',
-            [vehiculeId, brand, model]
+            'SELECT id, brand, model FROM vehicule WHERE brand LIKE ? OR model LIKE ? LIMIT 10',
+            [`%${query}%`, `%${query}%`]
         );
         return rows;
     } catch (err) {
-        console.error('Select error:', err.message);
+        console.error('Erreur lors de la recherche de véhicules:', err.message);
+        throw err;
     }
 }
 
 export async function setUserHasVehicule(userId, vehiculeId, battery_health, tyre) {
     try {
-        await db.query('INSERT INTO user_has_vehicule (user_id, vehicule_id, battery_health, tyre) VALUES (?,?,?,?)', [userId, vehiculeId, battery_health, tyre]);
+        // Utilisation de ON DUPLICATE KEY pour mettre à jour si l'utilisateur change de voiture
+        await db.query(
+            'INSERT INTO user_has_vehicule (user_id, vehicule_id, battery_health, tyre) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE vehicule_id = ?, battery_health = ?, tyre = ?',
+            [userId, vehiculeId, battery_health, tyre, vehiculeId, battery_health, tyre]
+        );
     } catch (err) {
-        console.error('Insert error:', err.message);
+        console.error('Erreur insertion véhicule utilisateur:', err.message);
+        throw err;
     }
 }
 

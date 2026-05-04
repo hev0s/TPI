@@ -126,31 +126,35 @@ router.delete("/user", verifyToken, async (req, res) => {
     }
 });
 
-// --- RECEVOIR LES VEHICULES ---
-router.get("/vehicules", verifyToken, async (req, res) => {
+// --- RECHERCHER UN VÉHICULE ---
+router.get("/vehicules/search", verifyToken, async (req, res) => {
+    const query = req.query.q;
+    if (!query || query.length < 3) {
+        return res.json([]);
+    }
     try {
-        const vehicules = await getUserVehicule(req.userId);
-        res.status(200).json(vehicules);
+        const results = await searchVehicles(query);
+        res.status(200).json(results);
     } catch (err) {
-        res.status(500).json({ error: 'Erreur lors de la récupération des véhicules' });
+        res.status(500).json({ error: 'Erreur lors de la recherche' });
     }
 });
 
-// --- AJOUTER VEHICULE ---
-router.post("/setVehicule", verifyToken, async (req, res) => {
-    const { newVehicule, battery_health } = req.body;
-    if (!newVehicule) {
-        return res.status(400).json({ error: 'Nouveau véhicule requis' });
+// --- ENREGISTRER LE VÉHICULE DE L'UTILISATEUR ---
+router.put("/user/car", verifyToken, async (req, res) => {
+    const { carId, tireType } = req.body;
+    // On fixe battery_health à 100 par défaut si non fourni
+    const battery_health = 100;
+
+    if (!carId || !tireType) {
+        return res.status(400).json({ error: 'Données manquantes' });
     }
-    if (battery_health === undefined) {
-        return res.status(400).json({ error: 'L\'état de la batterie est requis' });
-    }
+
     try {
-        await setUserHasVehicule(req.userId, battery_health, newVehicule);
-        res.status(200).json({ success: true, message: 'Nouveau véhicule ajouté avec succès' });
+        await setUserHasVehicule(req.userId, carId, battery_health, tireType);
+        res.status(200).json({ success: true, message: 'Véhicule enregistré' });
     } catch (err) {
-        console.error("Erreur lors de l'ajout du véhicule :", err);
-        res.status(500).json({ error: 'Erreur serveur' });
+        res.status(500).json({ error: 'Erreur serveur lors de la sauvegarde' });
     }
 });
 

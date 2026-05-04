@@ -193,22 +193,17 @@
         <p id="msg-fav" class="msg"></p>
     </div>
 
-    <!-- NOUVELLE SECTION : MON VÉHICULE -->
+    <!-- SECTION VÉHICULE -->
     <h3 data-i18n="car_title">🚗 Mon Véhicule</h3>
     <div class="form-car-container" style="margin-bottom: 30px;">
+        <label style="font-size: 14px; color: #3c4043; margin-bottom: 5px; display: block; font-weight: 500;">Rechercher votre modèle</label>
 
-        <label for="car-select" style="font-size: 14px; color: #3c4043; margin-bottom: 5px; display: block; font-weight: 500;">Modèle du véhicule</label>
-        <select id="car-select" class="form-control">
-            <option value="" disabled selected>Choisir une voiture...</option>
-            <!-- Ces options peuvent être codées en dur ou générées dynamiquement en JS -->
-            <option value="peugeot_208">Peugeot 208</option>
-            <option value="renault_clio">Renault Clio</option>
-            <option value="vw_golf">Volkswagen Golf</option>
-            <option value="toyota_yaris">Toyota Yaris</option>
-            <option value="tesla_model_3">Tesla Model 3</option>
-        </select>
+        <div class="autocomplete-wrapper">
+            <input type="text" id="car-search" placeholder="Tapez au moins 3 caractères (ex: Tesla...)" autocomplete="off">
+            <input type="hidden" id="car-id-selected"> <!-- Stocke l'ID pour la DB -->
+        </div>
 
-        <label for="tire-select" style="font-size: 14px; color: #3c4043; margin-bottom: 5px; display: block; font-weight: 500;">Type de pneus</label>
+        <label for="tire-select" style="font-size: 14px; color: #3c4043; margin-top: 15px; margin-bottom: 5px; display: block; font-weight: 500;">Type de pneus</label>
         <select id="tire-select" class="form-control">
             <option value="summer">Pneus Été (Summer)</option>
             <option value="winter">Pneus Hiver (Winter)</option>
@@ -218,7 +213,6 @@
         <button class="btn-primary" onclick="saveCar()" data-i18n="btn_save_car">Enregistrer le véhicule</button>
         <p id="msg-car" class="msg"></p>
     </div>
-    <!-- FIN SECTION VÉHICULE -->
 
     <h3 style="color: #ea4335; border-color: rgba(234, 67, 53, 0.2);" data-i18n="danger_zone">Zone de danger</h3>
     <button class="btn-danger" onclick="deleteAccount()" data-i18n="delete_account">🗑️ Supprimer mon compte définitivement</button>
@@ -284,39 +278,88 @@
         }
     }
 
-    // --- GESTION DU VÉHICULE ---
+    // --- GESTION DU VÉHICULE (RECHERCHE ET SAUVEGARDE) ---
+    let carAutocompleteTimeout = null;
+    const carSearchInput = document.getElementById('car-search');
+    const carIdHidden = document.getElementById('car-id-selected');
+
+    // Écouteur pour la recherche dynamique de véhicules
+    carSearchInput.addEventListener('input', function() {
+        const val = this.value;
+        const wrapper = this.parentNode;
+
+        // Supprimer les listes existantes
+        const oldList = wrapper.querySelector('.autocomplete-list');
+        if(oldList) oldList.remove();
+
+        if (val.length < 3) return;
+
+        clearTimeout(carAutocompleteTimeout);
+        carAutocompleteTimeout = setTimeout(async () => {
+            try {
+                // Appel à votre nouvelle route de recherche
+                const response = await fetch(`${API_URL}/api/vehicules/search?q=${encodeURIComponent(val)}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const vehicles = await response.json();
+
+                if (vehicles.length === 0) return;
+
+                const list = document.createElement('ul');
+                list.setAttribute('class', 'autocomplete-list');
+                wrapper.appendChild(list);
+
+                vehicles.forEach(v => {
+                    const item = document.createElement('li');
+                    item.innerText = `${v.brand} ${v.model}`;
+                    item.addEventListener('click', () => {
+                        carSearchInput.value = `${v.brand} ${v.model}`;
+                        carIdHidden.value = v.id; // On garde l'ID pour la DB
+                        list.remove();
+                    });
+                    list.appendChild(item);
+                });
+            } catch (err) {
+                console.error("Erreur recherche véhicules:", err);
+            }
+        }, 300);
+    });
+
+    // Fonction de sauvegarde mise à jour
     async function saveCar() {
-        const carId = document.getElementById('car-select').value;
+        const carId = carIdHidden.value;
         const tireType = document.getElementById('tire-select').value;
         const msgBox = document.getElementById('msg-car');
 
-        if(!carId || !tireType) {
+        if(!carId) {
             msgBox.style.color = "red";
-            msgBox.innerText = "Veuillez sélectionner un véhicule et un type de pneu.";
+            msgBox.innerText = "Veuillez sélectionner un véhicule dans la liste suggérée.";
             return;
         }
 
         msgBox.style.color = "#5f6368";
-        msgBox.innerText = "Enregistrement en cours...";
+        msgBox.innerText = "Enregistrement...";
 
         try {
-            // Assure-toi de créer cette route (ex: PUT /api/user/car) dans ton backend Node.js !
             const res = await fetch(`${API_URL}/api/user/car`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
                 body: JSON.stringify({ carId, tireType })
             });
 
             if (res.ok) {
                 msgBox.style.color = "green";
-                msgBox.innerText = "Véhicule enregistré avec succès !";
+                msgBox.innerText = "Véhicule mis à jour avec succès !";
             } else {
                 msgBox.style.color = "red";
-                msgBox.innerText = "Erreur lors de l'enregistrement.";
+                msgBox.innerText = "Erreur lors de la sauvegarde.";
             }
         } catch (err) {
             msgBox.style.color = "red";
-            msgBox.innerText = "Erreur de connexion avec le serveur.";
+            msgBox.innerText = "Erreur de connexion au serveur.";
         }
     }
 
