@@ -329,6 +329,21 @@
 
     <button class="btn-add-stop" id="btn-add-stop" onclick="addStop()" data-i18n="add_stop">+ Ajouter une étape</button>
 
+    <!-- Options de trajet -->
+    <div style="background: rgba(241, 243, 244, 0.7); padding: 15px; border-radius: 12px; border: 1px solid #dadce0; width: 100%; box-sizing: border-box; margin-bottom: 15px;">
+        <label style="display: flex; align-items: center; gap: 8px; font-size: 14px; color: #3c4043; cursor: pointer; margin-bottom: 15px;">
+            <input type="checkbox" id="allow-stops-toggle" checked style="width: 16px; height: 16px; margin: 0; cursor: pointer;">
+            Autoriser les arrêts recharge
+        </label>
+
+        <label style="font-size: 14px; color: #3c4043; display: block; margin-bottom: 5px;">Type de trajet :</label>
+        <select id="route-type-selector" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #dadce0; font-size: 14px; outline: none; cursor: pointer;">
+            <option value="fastest">Le plus rapide (Défaut)</option>
+            <option value="shortest">Le plus court</option>
+            <option value="eco">Le moins consommateur (Éco)</option>
+        </select>
+    </div>
+
     <div class="btn-group" id="main-buttons">
         <button class="btn-route" onclick="calculateRoute()" data-i18n="search_route">Calculer pour l'itinéraire</button>
         <button class="btn-logout" onclick="logout()" data-i18n="logout">Déconnexion</button>
@@ -824,6 +839,10 @@
 
     async function calculateRoute() {
         const inputs = document.querySelectorAll('.waypoint-input');
+        // Récupération des options utilisateur
+        const allowStops = document.getElementById('allow-stops-toggle').checked;
+        const routeType = document.getElementById('route-type-selector').value;
+
         let waypoints = [];
         const routeBtn = document.querySelector('.btn-route');
 
@@ -864,7 +883,7 @@
             language: 'fr',
             showAlternatives: true,
             lineOptions: {
-                styles: [{color: '#1a73e8', opacity: 0.8, weight: 6}]
+                styles: [{color: routeType === 'eco' ? '#34a853' : '#1a73e8', opacity: 0.8, weight: 6}]
             },
             createMarker: function(i, waypoint, n) {
                 if (i === 0) {
@@ -875,7 +894,7 @@
             }
         }).addTo(map);
 
-        routingControl.on('routesfound', function(e) {
+        routingControl.on('routesfound', async function(e) {
             const routes = e.routes;
             const summary = routes[0].summary;
             currentRouteDuration = summary.totalTime;
@@ -888,6 +907,72 @@
 
             routeBtn.innerText = typeof t === 'function' ? t('search_route') : "Rechercher l'itinéraire";
             routeBtn.style.opacity = "1";
+
+            // --- APPEL API DE SIMULATION AVEC SEGMENTS ---
+            if (selectedCarId) {
+                try {
+
+                    // Construction des segments à partir des instructions de navigation
+                    const instructions = routes[0].instructions;
+                    const routeSegments = instructions.map(inst => {
+                        let speed_kmh = 50;
+                        if (inst.time > 0 && inst.distance > 0) {
+                            speed_kmh = (inst.distance / inst.time) * 3.6; // Conversion m/s -> km/h
+                        }
+
+                        // Si le mode éco est activé, on simule une conduite plus douce (-10% de vitesse)
+                        if (routeType === 'eco') {
+                            speed_kmh *= 0.9;
+                        }
+
+                        // Si le mode sport est activé, on simule une conduite plus rapide (+10% de vitesse)
+                        if (routeType === 'sport') {
+                            speed_kmh *= 1.1;
+                        }
+
+                        return {
+                            distance: inst.distance,
+                            speed: speed_kmh,
+                            slope: 0 // À modifier quand on va intégrer le lissage (et API élévation)
+                        };
+                    });
+
+                    const simRes = await fetch(`${API_URL}/api/calculs/simulate`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                        body: JSON.stringify({
+                            carId: selectedCarId,
+                            routeSegments: routeSegments,
+                            routeType: routeType,
+                            allowStops: allowStops
+                        })
+                    });
+
+                    if (simRes.ok) {
+                        const simData = await simRes.json();
+                        let warningHtml = "";
+
+                        // Affichage des recommandations selon le back-end
+                        if (simData.needsChargingStop) {
+                            const stopText = simData.stopsNeeded > 1 ? `(${simData.stopsNeeded} arrêts nécessaires)` : `(1 arrêt nécessaire)`;
+                            warningHtml = `<br><span style="color: #ea4335; font-size: 14px; font-weight:bold;">⚠️ ${simData.message} ${stopText}</span>`;
+                        } else {
+                            warningHtml = `<br><span style="color: #34a853; font-size: 14px; font-weight:bold;">✅ ${simData.message}</span>`;
+                        }
+
+                        // Mise à jour visuelle du panneau
+                        const detailsDiv = document.getElementById('eta-details');
+                        detailsDiv.innerHTML = `
+                            <span id="eta-duration" class="eta-highlight">${Math.round(currentRouteDuration/60)} min</span> •
+                            <span id="eta-distance">${(currentRouteDistance/1000).toFixed(1)} km</span>
+                            <br><span style="color: #5f6368; font-size: 14px; font-weight:500;">⚡ Conso estimée: ${simData.energieConsommee_kWh.toFixed(2)} kWh (Arrivée: ${simData.socFinal.toFixed(1)}% SoC)</span>
+                            ${warningHtml}
+                        `;
+                    }
+                } catch (err) {
+                    console.error("Erreur lors de la simulation :", err);
+                }
+            }
 
             if (!isNavigating) {
                 document.getElementById('btn-start-nav').style.display = 'block';

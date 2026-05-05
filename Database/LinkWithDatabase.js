@@ -154,7 +154,7 @@ export async function getUserVehicule(userId) {
 export async function getUserVehicleData(userId, vehiculeId = null) {
     try {
         let query = `
-            SELECT v.brand, v.model, v.battery_capacity, v.base_consumption, uhv.battery_health, uhv.tyre, v,air_drag
+            SELECT v.brand, v.model, v.battery_capacity, v.base_consumption, uhv.battery_health, uhv.tyre, v.air_drag
             FROM user_has_vehicule uhv 
             JOIN vehicule v ON uhv.vehicule_id = v.id 
             WHERE uhv.user_id = ?

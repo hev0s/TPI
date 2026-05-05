@@ -1,3 +1,4 @@
+// routes/calculs.js
 import express from 'express';
 import jwt from 'jsonwebtoken';
 
@@ -5,8 +6,6 @@ import {getUserVehicleData} from "../Database/LinkWithDatabase.js";
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET;
-
-export default router;
 
 // Middleware pour vérifier l'utilisateur
 const verifyToken = (req, res, next) => {
@@ -21,130 +20,115 @@ const verifyToken = (req, res, next) => {
     });
 };
 
+// 1. CONSTANTES PHYSIQUES
 const RHO_AIR = 1.225;
 const GRAVITE = 9.81;
 const CRR_ETE = 0.010;
 const CRR_HIVERS = 0.012;
 const CRR_ALL_SEASON = 0.011;
 
+router.post('/simulate', verifyToken, async (req, res) => {
+    try {
+        const { carId, routeSegments, routeType, allowStops } = req.body;
 
-/**
- * 1. CONSTANTES PHYSIQUES
- * ----------------------------------------------------------------------------
- * @const {number} RHO_AIR - Masse volumique de l'air à 15°C (en kg/m^3)
- * const RHO_AIR = 1.225;
- *
- * @const {number} GRAVITE - Accélération de la pesanteur (en m/s^2)
- * const GRAVITE = 9.81;
- *
- * 2. VARIABLES TYPES DU VÉHICULE
- * ----------------------------------------------------------------------------
- * @var {number} cx - Coefficient de traînée aérodynamique (ex: 0.23 pour Tesla Model 3) (2Fx)/((1/2)*RHO_AIR*Vitesse^2)
- * Fx Force de trainée (soufflerie) ==> A chercher (à intégrer en BDD)
- * @var {number} surfaceFrontale - Surface frontale "S" ou "A" (en m^2, ex: 2.2) --> Négligé pour le moment
- * @var {number} crr - Coefficient de résistance au roulement (ex: 0.01 pour pneus été) --> A modifier en BDD (pneu été/hivers, puis constante attribuée)
- * @var {number} masse - Masse totale du véhicule en charge (en kg)
- * @var {number} rendementTraction - Efficacité Batterie -> Roues (ex: 0.85) --> Soit faire une moyenne (chois fait actuellement) soit inégrer en BDD pour chaque véhicules
- * @var {number} rendementRegen - Efficacité Roues -> Batterie au freinage (ex: 0.65) --> Soit faire une moyenne soit inégrer en BDD pour chaque véhicules
- * @var {number} puissanceAcc - Puissance des accessoires: chauffage, écrans (en Watts) --> On va négliger cette partie pour le moment
- */
+        // Récupérer les données du véhicule depuis la BDD
+        const carData = await getUserVehicleData(req.userId, carId);
+        if (!carData) return res.status(404).json({ error: 'Véhicule introuvable' });
 
-/**
- * 3. CALCUL DES FORCES DE RÉSISTANCE (en Newtons)
- * ----------------------------------------------------------------------------
- * Note : La vitesse (v) doit être en mètres par seconde (m/s).
- * Conversion : v_ms = v_kmh / 3.6
- *
- * A. Force Aérodynamique (Traînée)
- * F_aero = 0.5 * RHO_AIR * surfaceFrontale * cx * Math.pow(v, 2)
- *
- * B. Angle de la pente (en radians)
- * alpha = Math.atan(penteEnPourcentage / 100)
- *
- * C. Force de Roulement (Frottement des pneus)
- * F_roulement = crr * masse * GRAVITE * Math.cos(alpha)
- *
- * D. Force de Gravité (Liée à la pente)
- * F_pente = masse * GRAVITE * Math.sin(alpha)
- *
- * E. Force Totale (hors accélération)
- * F_tot = F_aero + F_roulement + F_pente
- */
+        // Définir le coefficient de pneu
+        let crr = CRR_ETE;
+        if (carData.tyre === 'winter') crr = CRR_HIVERS;
+        else if (carData.tyre === 'all_season') crr = CRR_ALL_SEASON;
 
-/**
- * 4. CALCUL DES PUISSANCES (en Watts)
- * ----------------------------------------------------------------------------
- * A. Puissance Mécanique requise aux roues
- * P_meca = F_tot * v
- *
- * B. Puissance Électrique tirée (ou injectée) dans la batterie
- *
- * if (F_tot > 0) {
- *     // Phase de traction (Le moteur consomme)
- *     P_elec = (P_meca / rendementTraction) + puissanceAcc
- * } else {
- *     // Phase de régénération (Descente : le moteur recharge la batterie)
- *     // F_tot et P_meca sont négatifs ici.
- *     P_elec = (P_meca * rendementRegen) + puissanceAcc
- * }
- */
+        // Variables du véhicule
+        const cx = carData.air_drag || 0.23; // Par défaut si null en base
+        const surfaceFrontale = 2.2; // Surface frontale négligée en base, on met une moyenne
+        const masse = 1800; // Masse moyenne, à ajouter en BDD idéalement
+        const rendementTraction = 0.85;
+        const rendementRegen = 0.65;
+        const puissanceAcc = 0; // Négligé pour le moment
 
-/**
- * 5. CALCUL DE LA CONSOMMATION FINALE (en kWh/100km)
- * ----------------------------------------------------------------------------
- * Pour obtenir des kWh/100km à partir de Watts et de m/s :
- * On convertit les Watts en kW ( / 1000)
- * On calcule l'énergie pour 100 km ( (P_elec / v) * 100 000 mètres )
- *
- * C_100km = (P_elec / (v * 10)) / 1000
- *
- * // Ou de manière plus explicite si on utilise la vitesse en km/h :
- * // C_100km = ( (P_elec / 1000) / v_kmh ) * 100
- */
+        let totalEnergyKwh = 0;
 
-/**
- * ============================================================================
- * CALCUL DE L'ÉTAT DE CHARGE (SoC - State of Charge)
- * ============================================================================
- *
- * 6. VARIABLES DE LA BATTERIE ET DU TRAJET
- * ----------------------------------------------------------------------------
- * @var {number} capaciteBatterieUtile - Capacité nette de la batterie (en kWh, ex: 75.0)
- * @var {number} socInitial - État de charge au départ (en %, de 0 à 100)
- * @var {number} distanceTrajet - Distance totale parcourue (en km)
- */
+        // On simule chaque segment du trajet
+        for (const segment of routeSegments) {
+            const v = (segment.speed || 80) / 3.6; // km/h -> m/s
+            const penteEnPourcentage = segment.slope || 0;
+            const distance_m = segment.distance;
 
-/**
- * 7. CALCUL DE L'ÉNERGIE CONSOMMÉE (en kWh)
- * ----------------------------------------------------------------------------
- * L'énergie totale extraite de la batterie sur l'ensemble du trajet.
- *
- * E_conso = C_100km * (distanceTrajet / 100)
- *
- * // Si calcul pas-à-pas (par seconde) :
- * // E_conso = somme( (P_elec / 1000) * (temps_ecoule_en_secondes / 3600) )
- */
+            // Calcul des forces
+            const alpha = Math.atan(penteEnPourcentage / 100);
+            const F_aero = 0.5 * RHO_AIR * surfaceFrontale * cx * Math.pow(v, 2);
+            const F_roulement = crr * masse * GRAVITE * Math.cos(alpha);
+            const F_pente = masse * GRAVITE * Math.sin(alpha);
 
-/**
- * 8. CALCUL DE LA VARIATION DU SOC (en %)
- * ----------------------------------------------------------------------------
- * Représente le pourcentage de batterie utilisé pendant le trajet.
- * Si le véhicule a plus régénéré qu'il n'a consommé (ex: grande descente),
- * cette valeur sera négative.
- *
- * deltaSoC = (E_conso / capaciteBatterieUtile) * 100
- */
+            const F_tot = F_aero + F_roulement + F_pente;
+            const P_meca = F_tot * v;
 
-/**
- * 9. CALCUL DU SOC FINAL (en %)
- * ----------------------------------------------------------------------------
- * L'état de charge à l'arrivée. Le résultat doit idéalement être borné
- * entre 0 et 100 pour respecter les limites physiques de la batterie.
- *
- * socFinal = socInitial - deltaSoC
- *
- * // Borner le résultat :
- * // socFinal = Math.max(0, Math.min(100, socFinal))
- */
+            // Puissance électrique
+            let P_elec = 0;
+            if (F_tot > 0) {
+                P_elec = (P_meca / rendementTraction) + puissanceAcc;
+            } else {
+                P_elec = (P_meca * rendementRegen) + puissanceAcc;
+            }
 
+            // Énergie consommée sur le segment en kWh
+            const time_s = distance_m / v;
+            const E_conso_segment = (P_elec * time_s) / 3600000; // Joules -> kWh
+            totalEnergyKwh += E_conso_segment;
+        }
 
+        // Calcul SoC Final
+        const capaciteBatterieUtile = carData.battery_capacity || 75.0;
+        const socInitial = carData.battery_health || 100;
+
+        const deltaSoC = (totalEnergyKwh / capaciteBatterieUtile) * 100;
+        let socFinal = socInitial - deltaSoC;
+
+        let needsChargingStop = false;
+        let stopsNeeded = 0;
+
+        // Stratégie d'arrêt : on vérifie si l'énergie requise dépasse l'énergie disponible
+        if (deltaSoC > socInitial) {
+            needsChargingStop = true;
+
+            // Énergie initialement disponible
+            const energyAvailable = capaciteBatterieUtile * (socInitial / 100);
+            // Énergie manquante pour le trajet
+            const energyMissing = totalEnergyKwh - energyAvailable;
+
+            // Calcul du nombre de recharges complètes nécessaires
+            stopsNeeded = Math.ceil(energyMissing / capaciteBatterieUtile);
+
+            // Nouveau SoC final en supposant qu'à chaque arrêt on recharge à 100% de la capacité utile
+            const totalEnergyWithCharges = energyAvailable + (stopsNeeded * capaciteBatterieUtile);
+            const remainingEnergy = totalEnergyWithCharges - totalEnergyKwh;
+            socFinal = (remainingEnergy / capaciteBatterieUtile) * 100;
+        } else if (allowStops && socFinal < 10) {
+            // Si on n'a pas strictement "besoin" de charger pour arriver,
+            // mais que le SoC final est très bas et que les arrêts sont autorisés
+            needsChargingStop = true;
+            stopsNeeded = 1;
+            socFinal = socFinal + 100; // On suppose une recharge
+        }
+
+        socFinal = Math.max(0, Math.min(100, socFinal)); // Borner le résultat
+
+        res.status(200).json({
+            energieConsommee_kWh: totalEnergyKwh,
+            socFinal: socFinal,
+            needsChargingStop: needsChargingStop,
+            stopsNeeded: stopsNeeded,
+            message: needsChargingStop
+                ? `Attention : Ce trajet nécessite ${stopsNeeded} arrêt(s) pour recharger.`
+                : "Trajet faisable sans arrêt."
+        });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Erreur lors du calcul de consommation' });
+    }
+});
+
+export default router;
