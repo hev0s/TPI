@@ -138,9 +138,9 @@ export async function deleteUserHasVehicule(userId, vehiculeId) {
 export async function getUserVehicule(userId) {
     try {
         const [rows] = await db.query(
-            `SELECT v.id, v.brand, v.model, uhv.battery_health, uhv.tyre 
-             FROM user_has_vehicule uhv 
-             JOIN vehicule v ON uhv.vehicule_id = v.id 
+            `SELECT v.id, v.brand, v.model, uhv.battery_health, uhv.tyre
+             FROM user_has_vehicule uhv
+                      JOIN vehicule v ON uhv.vehicule_id = v.id
              WHERE uhv.user_id = ?`,
             [userId]
         );
@@ -155,15 +155,17 @@ export async function getUserVehicleData(userId, vehiculeId = null) {
     try {
         let query = `
             SELECT v.brand, v.model, v.battery_capacity, v.base_consumption, uhv.battery_health, uhv.tyre, v.air_drag
-            FROM user_has_vehicule uhv 
-            JOIN vehicule v ON uhv.vehicule_id = v.id 
+            FROM user_has_vehicule uhv
+                     JOIN vehicule v ON uhv.vehicule_id = v.id
             WHERE uhv.user_id = ?
         `;
         let params = [userId];
+
         if (vehiculeId) {
             query += ` AND uhv.vehicule_id = ?`;
             params.push(vehiculeId);
         }
+
         query += ` LIMIT 1`; //Limite à 1 véhicule
         const [rows] = await db.query(query, params);
         return rows[0];
@@ -191,5 +193,15 @@ export async function updateUserLanguage(userId, language) {
         await db.query('UPDATE user SET language = ? WHERE id = ?', [language, userId]);
     } catch (err) {
         console.error('Erreur lors de la modification du pseudo:', err.message);
+    }
+}
+
+export async function getAllVehicles() {
+    try {
+        const [rows] = await db.query('SELECT id, brand, model FROM vehicule ORDER BY brand, model');
+        return rows;
+    } catch (err) {
+        console.error('Select error:', err.message);
+        throw err;
     }
 }

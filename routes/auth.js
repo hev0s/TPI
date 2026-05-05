@@ -13,7 +13,8 @@ import {
     deleteUserHasVehicule,
     updateFavoritePlace,
     deleteFavoritePlace,
-    searchVehicles
+    searchVehicles,
+    getAllVehicles
 } from "../Database/LinkWithDatabase.js";
 
 const router = express.Router();
@@ -137,12 +138,23 @@ router.get("/vehicules", verifyToken, async (req, res) => {
     }
 });
 
+// --- RECEVOIR TOUS LES VEHICULES (Catalogue) ---
+router.get("/vehicules/all", verifyToken, async (req, res) => {
+    try {
+        const vehicules = await getAllVehicles();
+        res.status(200).json(vehicules);
+    } catch (err) {
+        res.status(500).json({ error: 'Erreur lors de la récupération du catalogue' });
+    }
+});
+
 // --- RECHERCHER UN VÉHICULE (AUTOCOMPLÉTION) ---
 router.get("/vehicules/search", verifyToken, async (req, res) => {
     const query = req.query.q;
     if (!query || query.length < 3) {
         return res.json([]);
     }
+
     try {
         const results = await searchVehicles(query);
         res.status(200).json(results);
@@ -157,6 +169,7 @@ router.put("/user/car", verifyToken, async (req, res) => {
 
     // On utilise battery_health si fourni, sinon 100 par défaut
     const finalBatteryHealth = battery_health !== undefined ? battery_health : 100;
+
     if (!carId || !tireType) {
         return res.status(400).json({ error: 'Données manquantes' });
     }
@@ -191,6 +204,7 @@ router.put("/updateVehicule/:id", verifyToken, async (req, res) => {
 // --- SUPPRIMER UN VEHICULE ---
 router.delete("/user/vehicule/:id", verifyToken, async (req, res) => {
     const vehiculeId = req.params.id;
+
     try {
         await deleteUserHasVehicule(req.userId, vehiculeId);
         res.status(200).json({ success: true, message: "Véhicule supprimé" });
