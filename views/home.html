@@ -954,20 +954,35 @@
 
                         // Affichage des recommandations selon le back-end
                         if (simData.needsChargingStop) {
-                            const stopText = simData.stopsNeeded > 1 ? `(${simData.stopsNeeded} arrêts nécessaires)` : `(1 arrêt nécessaire)`;
-                            warningHtml = `<br><span style="color: #ea4335; font-size: 14px; font-weight:bold;">⚠️ ${simData.message} ${stopText}</span>`;
+                            if (!allowStops) {
+                                warningHtml = `<br><span style="color: #ea4335; font-size: 14px; font-weight:bold;">⛔ ${simData.message}</span>`;
+                            } else {
+                                const stopText = simData.stopsNeeded > 1 ? `(${simData.stopsNeeded} arrêts nécessaires)` : `(1 arrêt nécessaire)`;
+                                warningHtml = `<br><span style="color: #ea4335; font-size: 14px; font-weight:bold;">⚡ ${simData.message} ${stopText}</span>`;
+                            }
                         } else {
-                            warningHtml = `<br><span style="color: #34a853; font-size: 14px; font-weight:bold;">✅ ${simData.message}</span>`;
+                            warningHtml = `<br><span style="color: #34a853; font-size: 14px; font-weight:bold;">⚡ ${simData.message}</span>`;
                         }
 
                         // Mise à jour visuelle du panneau
                         const detailsDiv = document.getElementById('eta-details');
+
+                        // recalcule la durée formatée en heures et minutes
+                        const durationMins = Math.round(currentRouteDuration / 60);
+                        let formattedDuration = `${durationMins} min`;
+                        if (durationMins > 60) {
+                            const h = Math.floor(durationMins / 60);
+                            const m = durationMins % 60;
+                            formattedDuration = `${h}h ${m} min`;
+                        }
+
+                        // Injection de la variable formatée dans le HTML
                         detailsDiv.innerHTML = `
-                            <span id="eta-duration" class="eta-highlight">${Math.round(currentRouteDuration/60)} min</span> •
-                            <span id="eta-distance">${(currentRouteDistance/1000).toFixed(1)} km</span>
-                            <br><span style="color: #5f6368; font-size: 14px; font-weight:500;">⚡ Conso estimée: ${simData.energieConsommee_kWh.toFixed(2)} kWh (Arrivée: ${simData.socFinal.toFixed(1)}% SoC)</span>
-                            ${warningHtml}
-                        `;
+                        <span id="eta-duration" class="eta-highlight">${formattedDuration}</span>
+                        <span id="eta-distance">${(currentRouteDistance/1000).toFixed(1)} km</span>
+                        <br><span style="color: #5f6368; font-size: 14px; font-weight:500;">⚡ Conso estimée: ${simData.energieConsommee_kWh.toFixed(2)} kWh (Arrivée: ${simData.socFinal.toFixed(1)}% SoC)</span>
+                        ${warningHtml}
+                    `;
                     }
                 } catch (err) {
                     console.error("Erreur lors de la simulation :", err);

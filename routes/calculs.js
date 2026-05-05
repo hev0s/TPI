@@ -93,21 +93,24 @@ router.post('/simulate', verifyToken, async (req, res) => {
         if (deltaSoC > socInitial) {
             needsChargingStop = true;
 
-            // Énergie initialement disponible
-            const energyAvailable = capaciteBatterieUtile * (socInitial / 100);
-            // Énergie manquante pour le trajet
-            const energyMissing = totalEnergyKwh - energyAvailable;
-
-            // Calcul du nombre de recharges complètes nécessaires
-            stopsNeeded = Math.ceil(energyMissing / capaciteBatterieUtile);
-
-            // Nouveau SoC final en supposant qu'à chaque arrêt on recharge à 100% de la capacité utile
-            const totalEnergyWithCharges = energyAvailable + (stopsNeeded * capaciteBatterieUtile);
-            const remainingEnergy = totalEnergyWithCharges - totalEnergyKwh;
-            socFinal = (remainingEnergy / capaciteBatterieUtile) * 100;
+            if (allowStops) {
+                // Énergie initialement disponible
+                const energyAvailable = capaciteBatterieUtile * (socInitial / 100);
+                // Énergie manquante pour le trajet
+                const energyMissing = totalEnergyKwh - energyAvailable;
+                // Calcul du nombre de recharges complètes nécessaires
+                stopsNeeded = Math.ceil(energyMissing / capaciteBatterieUtile);
+                // Nouveau SoC final en supposant qu'à chaque arrêt on recharge à 100% de la capacité utile
+                const totalEnergyWithCharges = energyAvailable + (stopsNeeded * capaciteBatterieUtile);
+                const remainingEnergy = totalEnergyWithCharges - totalEnergyKwh;
+                socFinal = (remainingEnergy / capaciteBatterieUtile) * 100;
+            } else {
+                // Arrêts interdits : la batterie se videra avant l'arrivée
+                stopsNeeded = 0;
+                socFinal = 0;
+            }
         } else if (allowStops && socFinal < 10) {
-            // Si on n'a pas strictement "besoin" de charger pour arriver,
-            // mais que le SoC final est très bas et que les arrêts sont autorisés
+            // Si on n'a pas strictement "besoin" de charger pour arriver, mais que le SoC final est très bas et que les arrêts sont autorisés
             needsChargingStop = true;
             stopsNeeded = 1;
             socFinal = socFinal + 100; // On suppose une recharge
@@ -115,14 +118,22 @@ router.post('/simulate', verifyToken, async (req, res) => {
 
         socFinal = Math.max(0, Math.min(100, socFinal)); // Borner le résultat
 
+        // Création du message dynamique
+        let finalMessage = "Trajet faisable sans arrêt";
+        if (needsChargingStop) {
+            if (!allowStops) {
+                finalMessage = "Impossible de rejoindre la destination (Batterie insuffisante).";
+            } else {
+                finalMessage = `Attention : Ce trajet nécessite ${stopsNeeded} arrêt(s) pour recharger.`;
+            }
+        }
+
         res.status(200).json({
             energieConsommee_kWh: totalEnergyKwh,
             socFinal: socFinal,
             needsChargingStop: needsChargingStop,
             stopsNeeded: stopsNeeded,
-            message: needsChargingStop
-                ? `Attention : Ce trajet nécessite ${stopsNeeded} arrêt(s) pour recharger.`
-                : "Trajet faisable sans arrêt."
+            message: finalMessage
         });
 
     } catch (error) {
