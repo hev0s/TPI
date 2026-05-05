@@ -1,8 +1,7 @@
 // routes/calculs.js
 import express from 'express';
 import jwt from 'jsonwebtoken';
-
-import {getUserVehicleData} from "../Database/LinkWithDatabase.js";
+import {getUserVehicleData, getBaseVehicleData} from "../Database/LinkWithDatabase.js";
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -29,11 +28,105 @@ const CRR_ALL_SEASON = 0.011;
 
 router.post('/simulate', verifyToken, async (req, res) => {
     try {
-        const { carId, routeSegments, routeType, allowStops } = req.body;
+        const { carId, routeSegments, routeType, allowStops, coordinates } = req.body;
+
+        // --- LISSAGE DE LA VITESSE ---
+        for (let i = 0; i < routeSegments.length; i++) {
+            let current = routeSegments[i].speed;
+
+            // Anomalie : Vitesse en dessous de 10km/h ou au-dessus de 150km/h
+            if (current < 10 || current > 150) {
+                let prev = i > 0 ? routeSegments[i - 1].speed : null;
+                let next = i < routeSegments.length - 1 ? routeSegments[i + 1].speed : null;
+
+                if (prev !== null && next !== null && Math.abs(prev - next) < 10) {
+                    routeSegments[i].speed = prev; // Vitesses similaires autour, on garde cette vitesse
+                } else {
+                    routeSegments[i].speed = 50; // Vitesse différente, valeur sécurisée par défaut (ex: Village)
+                }
+            }
+        }
+
+        // --- RÉCUPÉRATION ET LISSAGE DES DÉNIVELÉS (API ORS) ---
+        let elevations = [];
+        if (coordinates && coordinates.length > 0) {
+            try {
+                // Échantillonnage pour éviter de surcharger l'API ORS (> 2000 points souvent refusés)
+                const sampledCoords = coordinates.filter((_, i) => i % Math.ceil(coordinates.length / 500) === 0);
+
+                const orsRes = await fetch('https://api.openrouteservice.org/elevation/line', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': process.env.ORS_API_KEY
+                    },
+                    body: JSON.stringify({
+                        format_in: "polyline",
+                        geometry: sampledCoords
+                    })
+                });
+
+                if (orsRes.ok) {
+                    const orsData = await orsRes.json();
+                    if (orsData && orsData.geometry) {
+                        elevations = orsData.geometry; // [lon, lat, altitude]
+
+                        // Lissage des anomalies altimétriques
+                        for(let i = 1; i < elevations.length - 1; i++) {
+                            const prevAlt = elevations[i-1][2];
+                            const currAlt = elevations[i][2];
+                            const nextAlt = elevations[i+1][2];
+
+                            // Si pic soudain de plus de 200m
+                            if (Math.abs(currAlt - prevAlt) > 200 && Math.abs(currAlt - nextAlt) > 200) {
+                                elevations[i][2] = (prevAlt + nextAlt) / 2;
+                            }
+                        }
+
+                        // Mapping rudimentaire des pentes lissées sur les segments
+                        const ptsPerSegment = Math.max(1, Math.floor(elevations.length / routeSegments.length));
+                        for (let i = 0; i < routeSegments.length; i++) {
+                            const startIdx = Math.min(i * ptsPerSegment, elevations.length - 1);
+                            const endIdx = Math.min((i + 1) * ptsPerSegment, elevations.length - 1);
+
+                            if (startIdx < endIdx) {
+                                const startAlt = elevations[startIdx][2];
+                                const endAlt = elevations[endIdx][2];
+                                const dist = routeSegments[i].distance;
+
+                                let slope = dist > 0 ? ((endAlt - startAlt) / dist) * 100 : 0;
+
+                                // Lissage extrême (pas plus de 15% ou -15% sur une vraie route goudronnée)
+                                if (slope > 15) slope = 15;
+                                if (slope < -15) slope = -15;
+
+                                routeSegments[i].slope = slope;
+                            } else {
+                                routeSegments[i].slope = 0;
+                            }
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error("Erreur ORS Elevation :", e);
+            }
+        }
 
         // Récupérer les données du véhicule depuis la BDD
-        const carData = await getUserVehicleData(req.userId, carId);
-        if (!carData) return res.status(404).json({ error: 'Véhicule introuvable' });
+        let carData = await getUserVehicleData(req.userId, carId);
+
+        // Si l'utilisateur n'a pas ce véhicule enregistré, on va chercher les données de base
+        if (!carData) {
+            const baseData = await getBaseVehicleData(carId);
+            if (!baseData) return res.status(404).json({ error: 'Véhicule introuvable' });
+
+            // On lui attribue des valeurs par défaut pour la simulation
+            carData = {
+                ...baseData,
+                battery_health: 100,
+                tyre: 'summer'
+            };
+        }
 
         // Définir le coefficient de pneu
         let crr = CRR_ETE;
@@ -82,7 +175,6 @@ router.post('/simulate', verifyToken, async (req, res) => {
         // Calcul SoC Final
         const capaciteBatterieUtile = carData.battery_capacity || 75.0;
         const socInitial = carData.battery_health || 100;
-
         const deltaSoC = (totalEnergyKwh / capaciteBatterieUtile) * 100;
         let socFinal = socInitial - deltaSoC;
 
@@ -92,7 +184,6 @@ router.post('/simulate', verifyToken, async (req, res) => {
         // Stratégie d'arrêt : on vérifie si l'énergie requise dépasse l'énergie disponible
         if (deltaSoC > socInitial) {
             needsChargingStop = true;
-
             if (allowStops) {
                 // Énergie initialement disponible
                 const energyAvailable = capaciteBatterieUtile * (socInitial / 100);
@@ -119,10 +210,10 @@ router.post('/simulate', verifyToken, async (req, res) => {
         socFinal = Math.max(0, Math.min(100, socFinal)); // Borner le résultat
 
         // Création du message dynamique
-        let finalMessage = "Trajet faisable sans arrêt";
+        let finalMessage = "Trajet faisable sans arrêt.";
         if (needsChargingStop) {
             if (!allowStops) {
-                finalMessage = "Impossible de rejoindre la destination (Batterie insuffisante).";
+                finalMessage = "Il n'est pas possible de rejoindre la destination sans arrêt.";
             } else {
                 finalMessage = `Attention : Ce trajet nécessite ${stopsNeeded} arrêt(s) pour recharger.`;
             }

@@ -205,3 +205,17 @@ export async function getAllVehicles() {
         throw err;
     }
 }
+
+export async function getBaseVehicleData(vehiculeId) {
+    try {
+        const [rows] = await db.query(
+            `SELECT brand, model, battery_capacity, base_consumption, air_drag 
+             FROM vehicule WHERE id = ? LIMIT 1`,
+            [vehiculeId]
+        );
+        return rows[0];
+    } catch (err) {
+        console.error('Erreur getBaseVehicleData:', err.message);
+        throw err;
+    }
+}
