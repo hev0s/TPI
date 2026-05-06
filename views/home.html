@@ -10,6 +10,10 @@
 
     <style>
         body { margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; height: 100vh; overflow: hidden; background-color: #e5e3df; }
+
+        /* Modif : On donne une couleur "eau" au fond de la carte pour éviter le gris si l'écran est gigantesque */
+        .leaflet-container { background: #aad3df !important; }
+
         #map { position: absolute; top: -25vh; left: -25vw; width: 150vw; height: 150vh; z-index: 1; }
 
         .leaflet-top { top: calc(25vh + 10px) !important; }
@@ -512,7 +516,16 @@
     }
 
     function initMap() {
-        map = L.map('map', {zoomControl: false}).setView([46.8, 6.5], 10);
+        // Limite le dézoom (minZoom: 3) et contraint la caméra au monde (maxBounds) pour éviter l'affichage de plusieurs carte du monde
+        map = L.map('map', {
+            zoomControl: false,
+            minZoom: 3,
+            maxBounds: [
+                [-90, -180],
+                [90, 180]
+            ],
+            maxBoundsViscosity: 1.0
+        }).setView([46.8, 6.5], 10);
 
         L.control.zoom({ position: 'bottomright' }).addTo(map);
 
