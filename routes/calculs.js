@@ -25,6 +25,7 @@ const GRAVITE = 9.81;
 const CRR_ETE = 0.010;
 const CRR_HIVERS = 0.012;
 const CRR_ALL_SEASON = 0.011;
+const C_ALPHA = 150000; // Rigidité de dérive globale estimée des pneus (N/rad)
 
 router.post('/simulate', verifyToken, async (req, res) => {
     try {
@@ -112,6 +113,50 @@ router.post('/simulate', verifyToken, async (req, res) => {
             }
         }
 
+        // --- CALCUL DES COURBURES (VIRAGES) ---
+        // On associe une courbure moyenne (rad/m) à chaque segment en analysant le changement de cap
+        if (coordinates && coordinates.length > 1) {
+            const ptsPerSegment = Math.max(1, Math.floor(coordinates.length / routeSegments.length));
+
+            for (let i = 0; i < routeSegments.length; i++) {
+                const startIdx = Math.min(i * ptsPerSegment, coordinates.length - 1);
+                const endIdx = Math.min((i + 1) * ptsPerSegment, coordinates.length - 1);
+
+                let totalAngle = 0;
+                let lastHeading = null;
+
+                for (let j = startIdx; j < endIdx; j++) {
+                    const p1 = coordinates[j];
+                    const p2 = coordinates[j + 1];
+                    if (!p1 || !p2) break; // Sécurité
+
+                    // Calcul du cap (heading) entre deux points GPS
+                    const phi1 = p1[1] * Math.PI / 180;
+                    const phi2 = p2[1] * Math.PI / 180;
+                    const deltaLambda = (p2[0] - p1[0]) * Math.PI / 180;
+
+                    const y = Math.sin(deltaLambda) * Math.cos(phi2);
+                    const x = Math.cos(phi1) * Math.sin(phi2) -
+                        Math.sin(phi1) * Math.cos(phi2) * Math.cos(deltaLambda);
+                    const heading = Math.atan2(y, x);
+
+                    // Si on a un cap précédent, on calcule la différence d'angle
+                    if (lastHeading !== null) {
+                        let diff = heading - lastHeading;
+                        // Normalisation entre -PI et PI pour prendre le virage le plus court
+                        while (diff > Math.PI) diff -= 2 * Math.PI;
+                        while (diff < -Math.PI) diff += 2 * Math.PI;
+                        totalAngle += Math.abs(diff);
+                    }
+                    lastHeading = heading;
+                }
+
+                // Courbure (rad/m) = Angle total tourné / distance du segment
+                const dist = routeSegments[i].distance;
+                routeSegments[i].courbure = dist > 0 ? (totalAngle / dist) : 0;
+            }
+        }
+
         // Récupérer les données du véhicule depuis la BDD
         let carData = await getUserVehicleData(req.userId, carId);
 
@@ -149,16 +194,74 @@ router.post('/simulate', verifyToken, async (req, res) => {
             const penteEnPourcentage = segment.slope || 0;
             const distance_m = segment.distance;
 
-            // Calcul des forces
+            // Calcul de l'angle de la pente en radians
             const alpha = Math.atan(penteEnPourcentage / 100);
+
+            /* ====================================================================
+               1. RÉSISTANCE AÉRODYNAMIQUE (F_aero)
+               Force opposée par l'air au déplacement du véhicule.
+               Formule : 1/2 * Rho * S * Cx * v^2
+               - Rho (RHO_AIR) : Densité de l'air (~1.225 kg/m3)
+               - S (surfaceFrontale) : Surface du véhicule face à la route (m2)
+               - Cx : Coefficient de pénétration dans l'air (aérodynamisme)
+               - v^2 : Vitesse au carré. C'est pourquoi la consommation explose à haute vitesse.
+               ==================================================================== */
             const F_aero = 0.5 * RHO_AIR * surfaceFrontale * cx * Math.pow(v, 2);
+
+            /* ====================================================================
+               2. RÉSISTANCE AU ROULEMENT (F_roulement)
+               Force liée à la déformation des pneus sous le poids du véhicule.
+               Formule : Crr * m * g * cos(alpha)
+               - Crr : Coefficient de résistance au roulement (dépend de la gomme)
+               - m (masse) * g (GRAVITE) : Poids du véhicule en Newtons
+               - cos(alpha) : Réduit très légèrement la force sur les fortes pentes.
+               ==================================================================== */
             const F_roulement = crr * masse * GRAVITE * Math.cos(alpha);
+
+            /* ====================================================================
+               3. FORCE DE LA PENTE / GRAVITÉ (F_pente)
+               Force qui tire le véhicule vers le bas en montée, ou le pousse en descente.
+               Formule : m * g * sin(alpha)
+               - sin(alpha) : Positif en montée (résistance), négatif en descente
+                 (ce qui donnera une force totale négative et permettra la régénération).
+               ==================================================================== */
             const F_pente = masse * GRAVITE * Math.sin(alpha);
 
-            const F_tot = F_aero + F_roulement + F_pente;
+            /* ====================================================================
+               4. RÉSISTANCE AU VIRAGE (F_virage)
+               Friction supplémentaire causée par l'angle de dérive des pneus pour
+               contrer la force centrifuge dans une courbe.
+               Formules : F_centrifuge = m * accélération_latérale
+                          F_virage = (F_centrifuge^2) / C_alpha
+               - courbure : Radian par mètre tourné (calculé au préalable)
+               - C_alpha : Rigidité de dérive des pneus (N/rad)
+               ==================================================================== */
+            const courbure = segment.courbure || 0;
+            let acc_lat = Math.pow(v, 2) * courbure; // Accélération latérale (v^2 * courbure)
+
+            // Sécurité physique : on limite l'accélération latérale à 1G (9.81 m/s²).
+            // Au-delà, un véhicule de tourisme normal dérape totalement.
+            if (acc_lat > GRAVITE) acc_lat = GRAVITE;
+
+            const F_centrifuge = masse * acc_lat;
+            const F_virage = Math.pow(F_centrifuge, 2) / C_ALPHA;
+
+            /* ====================================================================
+               BILAN DES FORCES ET PUISSANCE MÉCANIQUE
+               On additionne toutes les résistances.
+               La Puissance mécanique (Watts) = Force totale (N) * Vitesse (m/s)
+               ==================================================================== */
+            const F_tot = F_aero + F_roulement + F_pente + F_virage;
             const P_meca = F_tot * v;
 
-            // Puissance électrique
+            /* ====================================================================
+               CONVERSION ÉLECTRIQUE
+               Le moteur et l'inverter ont des pertes énergétiques (rendement < 1).
+               - Si F_tot > 0 : Le moteur doit forcer. Il consomme plus d'électricité
+                 qu'il ne produit de force mécanique (division par le rendement).
+               - Si F_tot < 0 : Le véhicule ralentit (descente). Le moteur génère de
+                 l'électricité mais avec des pertes (multiplication par le rendement).
+               ==================================================================== */
             let P_elec = 0;
             if (F_tot > 0) {
                 P_elec = (P_meca / rendementTraction) + puissanceAcc;
@@ -166,9 +269,15 @@ router.post('/simulate', verifyToken, async (req, res) => {
                 P_elec = (P_meca * rendementRegen) + puissanceAcc;
             }
 
-            // Énergie consommée sur le segment en kWh
+            /* ====================================================================
+               CONSOMMATION DU SEGMENT (ÉNERGIE)
+               L'énergie = Puissance * Temps.
+               On calcule le temps passé sur le segment (Distance / Vitesse),
+               puis on divise par 3'600'000 pour passer des Joules aux kiloWattheures (kWh).
+               ==================================================================== */
             const time_s = distance_m / v;
-            const E_conso_segment = (P_elec * time_s) / 3600000; // Joules -> kWh
+            const E_conso_segment = (P_elec * time_s) / 3600000;
+
             totalEnergyKwh += E_conso_segment;
         }
 
