@@ -27,6 +27,18 @@ const CRR_HIVERS = 0.012;
 const CRR_ALL_SEASON = 0.011;
 const C_ALPHA = 150000; // Rigidité de dérive globale estimée des pneus (N/rad)
 
+// Fonction utilitaire pour calculer la distance en mètres entre deux coordonnées GPS
+function getDistance(lon1, lat1, lon2, lat2) {
+    const R = 6371e3; // Rayon de la terre en mètres
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+}
+
 router.post('/simulate', verifyToken, async (req, res) => {
     try {
         const { carId, routeSegments, routeType, allowStops, coordinates } = req.body;
@@ -72,19 +84,68 @@ router.post('/simulate', verifyToken, async (req, res) => {
                     if (orsData && orsData.geometry) {
                         elevations = orsData.geometry; // [lon, lat, altitude]
 
-                        // Lissage des anomalies altimétriques
-                        for(let i = 1; i < elevations.length - 1; i++) {
-                            const prevAlt = elevations[i-1][2];
-                            const currAlt = elevations[i][2];
-                            const nextAlt = elevations[i+1][2];
+                        // --- LISSAGE DES ANOMALIES (PONTS, TUNNELS, ERREURS DEM) ---
+                        const MAX_SLOPE = 0.15; // 15% de pente maximum tolérée
 
-                            // Si pic soudain de plus de 200m
-                            if (Math.abs(currAlt - prevAlt) > 200 && Math.abs(currAlt - nextAlt) > 200) {
-                                elevations[i][2] = (prevAlt + nextAlt) / 2;
+                        let index = 0;
+                        while (index < elevations.length - 1) {
+                            const p1 = elevations[index];
+                            const p2 = elevations[index + 1];
+
+                            const dist = getDistance(p1[0], p1[1], p2[0], p2[1]);
+
+                            // Sécurité pour éviter la division par zéro
+                            if (dist === 0) {
+                                index++;
+                                continue;
+                            }
+
+                            const deltaAlt = p2[2] - p1[2];
+                            const currentSlope = Math.abs(deltaAlt / dist);
+
+                            // Détection de l'anomalie
+                            if (currentSlope > MAX_SLOPE) {
+                                let anomalyStartIndex = index;
+                                let anomalyEndIndex = index + 1;
+                                let foundValidEnd = false;
+
+                                // Recherche du prochain point "logique"
+                                for (let j = index + 2; j < elevations.length; j++) {
+                                    const pTemp = elevations[j];
+                                    const distFromStart = getDistance(p1[0], p1[1], pTemp[0], pTemp[1]);
+                                    if (distFromStart === 0) continue;
+
+                                    const altDiffFromStart = Math.abs(pTemp[2] - p1[2]);
+                                    const theoreticalSlope = altDiffFromStart / distFromStart;
+
+                                    // La pente redevient raisonnable, on a trouvé la sortie
+                                    if (theoreticalSlope <= MAX_SLOPE) {
+                                        anomalyEndIndex = j;
+                                        foundValidEnd = true;
+                                        break;
+                                    }
+                                }
+
+                                // Si on a trouvé la fin de l'anomalie, on "aplatit" par interpolation linéaire
+                                if (foundValidEnd) {
+                                    const startAlt = elevations[anomalyStartIndex][2];
+                                    const endAlt = elevations[anomalyEndIndex][2];
+                                    const steps = anomalyEndIndex - anomalyStartIndex;
+
+                                    for (let k = anomalyStartIndex + 1; k < anomalyEndIndex; k++) {
+                                        const stepCurrent = k - anomalyStartIndex;
+                                        elevations[k][2] = startAlt + (stepCurrent * ((endAlt - startAlt) / steps));
+                                    }
+                                    index = anomalyEndIndex;
+                                } else {
+                                    index++;
+                                }
+                            } else {
+                                index++;
                             }
                         }
 
-                        // Mapping rudimentaire des pentes lissées sur les segments
+                        // --- MAPPING DES PENTES LISSÉES SUR LES SEGMENTS ---
                         const ptsPerSegment = Math.max(1, Math.floor(elevations.length / routeSegments.length));
                         for (let i = 0; i < routeSegments.length; i++) {
                             const startIdx = Math.min(i * ptsPerSegment, elevations.length - 1);
@@ -97,7 +158,7 @@ router.post('/simulate', verifyToken, async (req, res) => {
 
                                 let slope = dist > 0 ? ((endAlt - startAlt) / dist) * 100 : 0;
 
-                                // Lissage extrême (pas plus de 15% ou -15% sur une vraie route goudronnée)
+                                // Lissage de sécurité (pas plus de 15% ou -15%)
                                 if (slope > 15) slope = 15;
                                 if (slope < -15) slope = -15;
 
