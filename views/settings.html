@@ -372,6 +372,7 @@
         document.getElementById('btn-save-car').innerText = "Mettre à jour";
         document.getElementById('btn-cancel-car').style.display = "block";
         carSearchInput.disabled = false; // True si on veut empêcher de changer le modèle lors de la modification
+        document.querySelector('.form-car-container').scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 
     function cancelCarEdit() {
@@ -544,7 +545,7 @@
         document.getElementById('fav-address').value = address;
         document.getElementById('btn-save-fav').innerText = "Mettre à jour";
         document.getElementById('btn-cancel-edit').style.display = "block";
-        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+        document.querySelector('.form-fav-container').scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 
     function cancelEdit() {
