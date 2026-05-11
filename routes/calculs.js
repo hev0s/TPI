@@ -242,7 +242,7 @@ router.post('/simulate', verifyToken, async (req, res) => {
         // Variables du véhicule
         const cx = carData.air_drag || 0.23; // Par défaut si null en base
         const surfaceFrontale = 2.2; // Surface frontale négligée en base, on met une moyenne
-        const masse = 1800; // Masse moyenne, à ajouter en BDD idéalement
+        const masse = carData.weight || 1800; // Poids pris de la DB si disponible, sinon moyenne 1800kg
         const rendementTraction = 0.85;
         const rendementRegen = 0.65;
         const puissanceAcc = 0; // Négligé pour le moment (On parle des accessoires et non de l'accélération)
@@ -250,8 +250,17 @@ router.post('/simulate', verifyToken, async (req, res) => {
         let totalEnergyKwh = 0;
         let prev_v = 0; // Vitesse initiale du véhicule (à l'arrêt)
 
+        // --- GESTION DYNAMIQUE DES ARRÊTS ---
+        const capaciteBatterieUtile = carData.battery_capacity || 75.0;
+        let currentSoC = carData.battery_health || 100;
+
+        let suggestedStops = [];
+        let chargingTime_s = 0;
+        let stopsNeeded = 0;
+
         // On simule chaque segment du trajet
-        for (const segment of routeSegments) {
+        for (let i = 0; i < routeSegments.length; i++) {
+            const segment = routeSegments[i];
             const v = (segment.speed || 80) / 3.6; // km/h -> m/s
             const penteEnPourcentage = segment.slope || 0;
             const distance_m = segment.distance;
@@ -352,9 +361,9 @@ router.post('/simulate', verifyToken, async (req, res) => {
 
                 // L'agressivité de l'accélération impacte l'efficacité électrique
                 let rendementAcc = rendementTraction;
-                if (routeType === 'sport') rendementAcc *= 0.85; // Pertes thermiques liées à la forte demande de courant
-                if (routeType === 'eco') rendementAcc *= 1.05;   // Accélération douce et optimale
-                if (rendementAcc > 0.95) rendementAcc = 0.95;    // Sécurité physique (Plafond)
+                if (routeType === 'sport') rendementAcc *= 0.85;
+                if (routeType === 'eco') rendementAcc *= 1.05;
+                if (rendementAcc > 0.95) rendementAcc = 0.95;
 
                 E_cinetique_kWh = (delta_Ek / rendementAcc) / 3600000;
 
@@ -364,55 +373,49 @@ router.post('/simulate', verifyToken, async (req, res) => {
 
                 // L'agressivité du freinage définit la part récupérée par le moteur vs perdue dans les freins mécaniques
                 let rendementFreinage = rendementRegen;
-                if (routeType === 'sport') rendementFreinage *= 0.40; // Freinage très sec = utilisation des freins disques, peu de régénération
-                if (routeType === 'eco') rendementFreinage *= 1.15;   // Freinage ultra anticipé = 100% fait au frein moteur régénératif
-                if (rendementFreinage > 0.90) rendementFreinage = 0.90; // Limite physique de l'inverter
+                if (routeType === 'sport') rendementFreinage *= 0.40;
+                if (routeType === 'eco') rendementFreinage *= 1.15;
+                if (rendementFreinage > 0.90) rendementFreinage = 0.90;
 
-                E_cinetique_kWh = - (delta_Ek * rendementFreinage) / 3600000; // Négatif car l'énergie recharge la batterie
+                E_cinetique_kWh = - (delta_Ek * rendementFreinage) / 3600000;
             }
 
-            prev_v = v; // On enregistre la vitesse actuelle pour l'utiliser au segment suivant
+            prev_v = v;
 
             // Bilan total : Consommation de maintien (E_conso_segment) + Énergie d'accélération/freinage
-            totalEnergyKwh += E_conso_segment + E_cinetique_kWh;
-        }
+            const segmentEnergy = E_conso_segment + E_cinetique_kWh;
+            totalEnergyKwh += segmentEnergy;
 
-        // Calcul SoC Final
-        const capaciteBatterieUtile = carData.battery_capacity || 75.0;
-        const socInitial = carData.battery_health || 100;
-        const deltaSoC = (totalEnergyKwh / capaciteBatterieUtile) * 100;
-        let socFinal = socInitial - deltaSoC;
+            // --- SUIVI DE LA BATTERIE POUR LES ARRETS ---
+            const deltaSoCSegment = (segmentEnergy / capaciteBatterieUtile) * 100;
 
-        let needsChargingStop = false;
-        let stopsNeeded = 0;
+            // ANTICIPATION : Si ce segment risque de nous faire tomber sous les 10%, on s'arrête recharger AVANT de le parcourir.
+            if (allowStops && (currentSoC - deltaSoCSegment <= 10)) {
+                stopsNeeded++;
 
-        // Stratégie d'arrêt : on vérifie si l'énergie requise dépasse l'énergie disponible
-        if (deltaSoC > socInitial) {
-            needsChargingStop = true;
-            if (allowStops) {
-                // Énergie initialement disponible
-                const energyAvailable = capaciteBatterieUtile * (socInitial / 100);
-                // Énergie manquante pour le trajet
-                const energyMissing = totalEnergyKwh - energyAvailable;
-                // Calcul du nombre de recharges complètes nécessaires
-                stopsNeeded = Math.ceil(energyMissing / capaciteBatterieUtile);
-                // Nouveau SoC final en supposant qu'à chaque arrêt on recharge à 100% de la capacité utile
-                const totalEnergyWithCharges = energyAvailable + (stopsNeeded * capaciteBatterieUtile);
-                const remainingEnergy = totalEnergyWithCharges - totalEnergyKwh;
-                socFinal = (remainingEnergy / capaciteBatterieUtile) * 100;
-            } else {
-                // Arrêts interdits : la batterie se videra avant l'arrivée
-                stopsNeeded = 0;
-                socFinal = 0;
+                // Calcul du temps pour recharger jusqu'à 80% avec une borne moyenne de 50kW
+                const energieARecharger = capaciteBatterieUtile * (80 - currentSoC) / 100;
+                const tempsRechargeHeures = energieARecharger / 50;
+                chargingTime_s += tempsRechargeHeures * 3600;
+
+                currentSoC = 80; // La voiture fait le plein jusqu'à 80% avant de continuer
+
+                // On récupère les coordonnées GPS du début de ce segment pour placer la borne sur la carte
+                if (coordinates && coordinates.length > 0) {
+                    const coordIndex = Math.floor((i / routeSegments.length) * coordinates.length);
+                    const stopPoint = coordinates[coordIndex];
+                    if (stopPoint) {
+                        suggestedStops.push({ lat: stopPoint[1], lon: stopPoint[0] });
+                    }
+                }
             }
-        } else if (allowStops && socFinal < 10) {
-            // Si on n'a pas strictement "besoin" de charger pour arriver, mais que le SoC final est très bas et que les arrêts sont autorisés
-            needsChargingStop = true;
-            stopsNeeded = 1;
-            socFinal = socFinal + 100; // On suppose une recharge
+
+            // Une fois qu'on s'est assuré d'avoir assez de batterie, on déduit la consommation du segment
+            currentSoC -= deltaSoCSegment;
         }
 
-        socFinal = Math.max(0, Math.min(100, socFinal)); // Borner le résultat
+        let socFinal = Math.max(0, Math.min(100, currentSoC));
+        let needsChargingStop = stopsNeeded > 0 || (!allowStops && currentSoC < 0);
 
         // Création du message dynamique
         let finalMessage = "Trajet faisable sans arrêt.";
@@ -429,6 +432,8 @@ router.post('/simulate', verifyToken, async (req, res) => {
             socFinal: socFinal,
             needsChargingStop: needsChargingStop,
             stopsNeeded: stopsNeeded,
+            chargingTime_s: chargingTime_s,
+            suggestedStops: suggestedStops,
             message: finalMessage
         });
 
