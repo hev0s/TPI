@@ -11,7 +11,7 @@
     <style>
         body { margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; height: 100vh; overflow: hidden; background-color: #e5e3df; }
 
-        /* Modif : On donne une couleur "eau" au fond de la carte pour éviter le gris si l'écran est gigantesque */
+        /* On donne une couleur "eau" au fond de la carte pour éviter le gris si l'écran est gigantesque */
         .leaflet-container { background: #aad3df !important; }
 
         #map { position: absolute; top: -25vh; left: -25vw; width: 150vw; height: 150vh; z-index: 1; }
@@ -299,9 +299,9 @@
 
         <label style="font-size: 14px; color: #3c4043; display: block; margin-bottom: 5px;">Type de trajet :</label>
         <select id="route-type-selector" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #dadce0; font-size: 14px; outline: none; cursor: pointer;">
-            <option value="fastest">Le plus rapide (Défaut)</option>
-            <option value="shortest">Le plus court</option>
-            <option value="eco">Le moins consommateur (Éco)</option>
+            <option value="normal">Normal</option>
+            <option value="eco">Éco</option>
+            <option value="sport">Sport</option>
         </select>
     </div>
 
@@ -866,13 +866,21 @@
         const routeType = document.getElementById('route-type-selector').value;
         const allowStops = document.getElementById('allow-stops-toggle').checked;
 
+        // Définition de la couleur en fonction du mode
+        let routeColor = '#1a73e8'; // Bleu par défaut (Normal)
+        if (routeType === 'eco') {
+            routeColor = '#34a853'; // Vert (Éco)
+        } else if (routeType === 'sport') {
+            routeColor = '#ea4335'; // Rouge (Sport)
+        }
+
         routingControl = L.Routing.control({
             waypoints: waypoints,
             routeWhileDragging: true,
             language: 'fr',
             showAlternatives: true,
             lineOptions: {
-                styles: [{color: routeType === 'eco' ? '#34a853' : '#1a73e8', opacity: 0.8, weight: 6}]
+                styles: [{color: routeColor, opacity: 0.8, weight: 6}]
             },
             createMarker: function(i, waypoint, n) {
                 if (i === 0) {

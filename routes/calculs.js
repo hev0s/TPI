@@ -245,9 +245,10 @@ router.post('/simulate', verifyToken, async (req, res) => {
         const masse = 1800; // Masse moyenne, à ajouter en BDD idéalement
         const rendementTraction = 0.85;
         const rendementRegen = 0.65;
-        const puissanceAcc = 0; // Négligé pour le moment
+        const puissanceAcc = 0; // Négligé pour le moment (On parle des accessoires et non de l'accélération)
 
         let totalEnergyKwh = 0;
+        let prev_v = 0; // Vitesse initiale du véhicule (à l'arrêt)
 
         // On simule chaque segment du trajet
         for (const segment of routeSegments) {
@@ -301,7 +302,6 @@ router.post('/simulate', verifyToken, async (req, res) => {
             let acc_lat = Math.pow(v, 2) * courbure; // Accélération latérale (v^2 * courbure)
 
             // Sécurité physique : on limite l'accélération latérale à 1G (9.81 m/s²).
-            // Au-delà, un véhicule de tourisme normal dérape totalement.
             if (acc_lat > GRAVITE) acc_lat = GRAVITE;
 
             const F_centrifuge = masse * acc_lat;
@@ -339,7 +339,42 @@ router.post('/simulate', verifyToken, async (req, res) => {
             const time_s = distance_m / v;
             const E_conso_segment = (P_elec * time_s) / 3600000;
 
-            totalEnergyKwh += E_conso_segment;
+            /* ====================================================================
+               5. ÉNERGIE CINÉTIQUE (ACCÉLÉRATION ET FREINAGE SELON LE MODE)
+               On calcule l'énergie pour passer de l'ancienne à la nouvelle vitesse.
+               ==================================================================== */
+            let E_cinetique_kWh = 0;
+
+            if (v > prev_v) {
+                // --- Phase d'accélération ---
+                // Énergie nécessaire pour monter en vitesse (Joules)
+                const delta_Ek = 0.5 * masse * (Math.pow(v, 2) - Math.pow(prev_v, 2));
+
+                // L'agressivité de l'accélération impacte l'efficacité électrique
+                let rendementAcc = rendementTraction;
+                if (routeType === 'sport') rendementAcc *= 0.85; // Pertes thermiques liées à la forte demande de courant
+                if (routeType === 'eco') rendementAcc *= 1.05;   // Accélération douce et optimale
+                if (rendementAcc > 0.95) rendementAcc = 0.95;    // Sécurité physique (Plafond)
+
+                E_cinetique_kWh = (delta_Ek / rendementAcc) / 3600000;
+
+            } else if (v < prev_v) {
+                // --- Phase de freinage / Décélération ---
+                const delta_Ek = 0.5 * masse * (Math.pow(prev_v, 2) - Math.pow(v, 2));
+
+                // L'agressivité du freinage définit la part récupérée par le moteur vs perdue dans les freins mécaniques
+                let rendementFreinage = rendementRegen;
+                if (routeType === 'sport') rendementFreinage *= 0.40; // Freinage très sec = utilisation des freins disques, peu de régénération
+                if (routeType === 'eco') rendementFreinage *= 1.15;   // Freinage ultra anticipé = 100% fait au frein moteur régénératif
+                if (rendementFreinage > 0.90) rendementFreinage = 0.90; // Limite physique de l'inverter
+
+                E_cinetique_kWh = - (delta_Ek * rendementFreinage) / 3600000; // Négatif car l'énergie recharge la batterie
+            }
+
+            prev_v = v; // On enregistre la vitesse actuelle pour l'utiliser au segment suivant
+
+            // Bilan total : Consommation de maintien (E_conso_segment) + Énergie d'accélération/freinage
+            totalEnergyKwh += E_conso_segment + E_cinetique_kWh;
         }
 
         // Calcul SoC Final
