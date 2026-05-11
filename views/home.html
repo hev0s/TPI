@@ -92,7 +92,7 @@
             padding: 12px;
             cursor: pointer;
             border: none;
-            border-radius: 12px; /* Bords arrondis pour tous les boutons */
+            border-radius: 12px; /* Bords arrondis pour tous boutons */
             font-size: 15px;
             font-weight: 600;
             transition: transform 0.1s, filter 0.2s;
@@ -980,12 +980,58 @@
                             return;
                         }
 
+                        // --- AJOUT DU TEMPS DE RECHARGE A L'ETA ---
+                        if (simData.chargingTime_s > 0) {
+                            currentRouteDuration += simData.chargingTime_s;
+                            updateETAPanel(); // Met à jour l'affichage de l'heure d'arrivée
+
+                            // --- RECHERCHE ET AFFICHAGE DES BORNES RÉELLES ---
+                            if (simData.suggestedStops && simData.suggestedStops.length > 0) {
+                                simData.suggestedStops.forEach(async (stop, index) => {
+                                    try {
+                                        // Recherche de bornes de recharge réelles à moins de 5km de la zone de panne
+                                        const query = `
+                                            [out:json];
+                                            node(around:5000, ${stop.lat}, ${stop.lon})["amenity"="charging_station"];
+                                            out 1;
+                                        `;
+                                        const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`;
+                                        const response = await fetch(url);
+                                        const data = await response.json();
+
+                                        const chargeIcon = L.divIcon({
+                                            className: 'waypoint-btn',
+                                            html: '⚡',
+                                            iconSize: [38, 38],
+                                            iconAnchor: [19, 19],
+                                            style: 'background: white; border: 2px solid #34a853;'
+                                        });
+
+                                        if (data.elements && data.elements.length > 0) {
+                                            const realStation = data.elements[0];
+                                            L.marker([realStation.lat, realStation.lon], {icon: chargeIcon, zIndexOffset: 1500})
+                                                .addTo(map)
+                                                .bindPopup(`<b>Station de recharge (Arrêt ${index + 1})</b><br>Détour optimisé.`);
+                                        } else {
+                                            // Si aucune borne listée n'est trouvée, on met un marqueur générique
+                                            L.marker([stop.lat, stop.lon], {icon: chargeIcon, zIndexOffset: 1500})
+                                                .addTo(map)
+                                                .bindPopup(`<b>Zone suggérée pour recharge</b><br>Arrêt ${index + 1}`);
+                                        }
+                                    } catch (e) {
+                                        console.error("Erreur recherche borne réelle", e);
+                                    }
+                                });
+                            }
+                        }
+
                         let warningHtml = "";
 
                         // Affichage des recommandations selon le back-end
                         if (simData.needsChargingStop) {
                             const stopText = simData.stopsNeeded > 1 ? `(${simData.stopsNeeded} arrêts nécessaires)` : `(1 arrêt nécessaire)`;
-                            warningHtml = `<br><span style="color: #ea4335; font-size: 14px; font-weight:bold;">⚠️ ${simData.message} ${stopText}</span>`;
+                            const chargeMins = Math.round((simData.chargingTime_s || 0) / 60);
+                            warningHtml = `<br><span style="color: #ea4335; font-size: 14px; font-weight:bold;">⚠️ ${simData.message} ${stopText}<br>🔌 + ${chargeMins} min de recharge</span>`;
                         } else {
                             warningHtml = `<br><span style="color: #34a853; font-size: 14px; font-weight:bold;">✅ ${simData.message}</span>`;
                         }
