@@ -185,6 +185,8 @@
 
         @media (max-width: 600px) {
             #controls { top: 10px; left: 10px; right: 10px; width: auto; }
+            /* Cache les options sur mobile si on est en navigation */
+            body.navigating #route-options-container { display: none !important; }
         }
         @media (orientation: landscape) and (max-height: 600px) {
             #controls {
@@ -219,6 +221,8 @@
                 padding: 12px;
                 font-size: 14px;
             }
+            /* Cache les options en format paysage sur mobile si on est en navigation */
+            body.navigating #route-options-container { display: none !important; }
         }
     </style>
 </head>
@@ -268,7 +272,6 @@
         <h3 style="margin: 0; color: #202124;">DuckyVolt</h3>
     </div>
 
-    <!-- Sélecteur de véhicule -->
     <div class="input-group" id="car-selector-container" style="display: none; margin-bottom: 15px;">
         <select id="car-selector" style="padding: 12px; border-radius: 12px; border: 1px solid #dadce0; width: 100%; font-size: 14px; background-color: rgba(241, 243, 244, 0.7); color: #3c4043; outline: none;">
             <option value="">Chargement de vos véhicules...</option>
@@ -290,8 +293,7 @@
 
     <button class="btn-add-stop" id="btn-add-stop" onclick="addStop()" data-i18n="add_stop">+ Ajouter une étape</button>
 
-    <!-- Options de trajet -->
-    <div style="background: rgba(241, 243, 244, 0.7); padding: 15px; border-radius: 12px; border: 1px solid #dadce0; width: 100%; box-sizing: border-box; margin-bottom: 15px;">
+    <div id="route-options-container" style="background: rgba(241, 243, 244, 0.7); padding: 15px; border-radius: 12px; border: 1px solid #dadce0; width: 100%; box-sizing: border-box; margin-bottom: 15px;">
         <label style="display: flex; align-items: center; gap: 8px; font-size: 14px; color: #3c4043; cursor: pointer; margin-bottom: 15px;">
             <input type="checkbox" id="allow-stops-toggle" checked style="width: 16px; height: 16px; margin: 0; cursor: pointer;">
             Autoriser les arrêts recharge
@@ -356,6 +358,15 @@
 
     // Variables et fonction pour les véhicules
     let selectedCarId = localStorage.getItem('selectedCarId') || null;
+
+    document.getElementById('allow-stops-toggle').addEventListener('change', () => {
+        if (routingControl) calculateRoute();
+    });
+
+    document.getElementById('route-type-selector').addEventListener('change', () => {
+        if (routingControl) calculateRoute();
+    });
+
 
     async function loadUserCarsForNav() {
         try {
@@ -879,6 +890,7 @@
             routeWhileDragging: true,
             language: 'fr',
             showAlternatives: true,
+            fitSelectedRoutes: !isNavigating, // Empêche de dézoomer de force si on est en train de naviguer
             lineOptions: {
                 styles: [{color: routeColor, opacity: 0.8, weight: 6}]
             },
@@ -948,18 +960,23 @@
 
                         if (simData.needsChargingStop && !allowStops) {
                             alert("Itinéraire impossible sans faire des arrêts");
-
-                            if (routingControl) {
-                                routingControl.setWaypoints([]);
-                                map.removeControl(routingControl);
-                                routingControl = null;
-                            }
-                            document.querySelectorAll('.leaflet-routing-container').forEach(el => el.remove());
-                            currentRouteCoords = null;
-
                             resetRouteButton();
-                            document.getElementById('btn-start-nav').style.display = 'none';
-                            document.getElementById('eta-panel').style.display = 'none';
+
+                            // Si on était en navigation, on coupe tout proprement
+                            if (isNavigating) {
+                                stopNavigation();
+                            } else {
+                                // Sinon on nettoie juste la carte
+                                if (routingControl) {
+                                    routingControl.setWaypoints([]);
+                                    map.removeControl(routingControl);
+                                    routingControl = null;
+                                }
+                                document.querySelectorAll('.leaflet-routing-container').forEach(el => el.remove());
+                                currentRouteCoords = null;
+                                document.getElementById('btn-start-nav').style.display = 'none';
+                                document.getElementById('eta-panel').style.display = 'none';
+                            }
                             return;
                         }
 
@@ -1000,21 +1017,27 @@
 
             routeBtn.innerText = typeof t === 'function' ? t('search_route') : "Rechercher l'itinéraire";
             routeBtn.style.opacity = "1";
-            document.getElementById('btn-start-nav').style.display = 'none';
-            document.getElementById('eta-panel').style.display = 'none';
 
-            if (routingControl) {
-                routingControl.setWaypoints([]);
-                map.removeControl(routingControl);
-                routingControl = null;
+            // Si on était en navigation, on arrête tout
+            if (isNavigating) {
+                stopNavigation();
+            } else {
+                document.getElementById('btn-start-nav').style.display = 'none';
+                document.getElementById('eta-panel').style.display = 'none';
+                if (routingControl) {
+                    routingControl.setWaypoints([]);
+                    map.removeControl(routingControl);
+                    routingControl = null;
+                }
+                document.querySelectorAll('.leaflet-routing-container').forEach(el => el.remove());
+                currentRouteCoords = null;
             }
-            document.querySelectorAll('.leaflet-routing-container').forEach(el => el.remove());
-            currentRouteCoords = null;
         });
     }
 
     function startNavigation() {
         isNavigating = true;
+        document.body.classList.add('navigating');
         requestWakeLock();
 
         document.getElementById('header-controls').style.display = 'none';
@@ -1061,6 +1084,7 @@
 
     function stopNavigation() {
         isNavigating = false;
+        document.body.classList.remove('navigating'); // Retire la classe au stop
         releaseWakeLock();
 
         const mapDiv = document.getElementById('map');
