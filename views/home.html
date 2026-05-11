@@ -183,6 +183,20 @@
             animation: pulse-animation 2s ease-out infinite;
         }
 
+        /* Marker de recharge sur la carte */
+        .charging-marker-icon {
+            background: white;
+            border: 2px solid #34a853;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+
         @media (max-width: 600px) {
             #controls { top: 10px; left: 10px; right: 10px; width: auto; }
             /* Cache les options sur mobile si on est en navigation */
@@ -340,6 +354,12 @@
     let routingControl = null;
     let userLocation = null;
     let userMarker = null;
+
+    // Tableau global pour stocker et supprimer les bornes de recharge
+    let chargingMarkers = [];
+
+    // FLAG GLOBAL POUR LES DETOURS (Empêche la boucle infinie)
+    let isOptimizingRoute = false;
 
     let currentRouteDuration = 0;
     let currentRouteDistance = 0;
@@ -836,12 +856,21 @@
     }
 
     async function calculateRoute() {
+        // Reset le statut pour permettre une nouvelle optimisation de la ligne bleue
+        isOptimizingRoute = false;
+
         const inputs = document.querySelectorAll('.waypoint-input');
         let waypoints = [];
         const routeBtn = document.querySelector('.btn-route');
 
         routeBtn.innerText = "⏳ Calcul en cours...";
         routeBtn.style.opacity = "0.7";
+
+        // Nettoyage des anciennes bornes de recharge
+        if (chargingMarkers) {
+            chargingMarkers.forEach(m => map.removeLayer(m));
+        }
+        chargingMarkers = [];
 
         for (let i = 0; i < inputs.length; i++) {
             const address = inputs[i].value.trim();
@@ -926,7 +955,6 @@
             // --- APPEL API DE SIMULATION AVEC SEGMENTS ---
             if (selectedCarId) {
                 try {
-
                     // Construction des segments à partir des instructions de navigation
                     const instructions = routes[0].instructions;
                     const routeSegments = instructions.map(inst => {
@@ -980,47 +1008,76 @@
                             return;
                         }
 
-                        // --- AJOUT DU TEMPS DE RECHARGE A L'ETA ---
+                        // --- 1. OPTIMISATION DU TRAJET VERS LES VRAIES BORNES (PREMIER PASSAGE) ---
+                        // Si le serveur suggère des arrêts ET qu'on ne les a pas encore intégrés au tracé
+                        if (simData.chargingTime_s > 0 && !isOptimizingRoute && simData.suggestedStops && simData.suggestedStops.length > 0) {
+
+                            isOptimizingRoute = true; // On bloque ce bloc pour le prochain passage
+                            routeBtn.innerText = "🔌 Détour vers les bornes...";
+
+                            // On lance la recherche Overpass pour chaque arrêt suggéré
+                            let fetchPromises = simData.suggestedStops.map(stop => {
+                                const query = `[out:json];node(around:5000, ${stop.lat}, ${stop.lon})["amenity"="charging_station"];out 1;`;
+                                const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`;
+
+                                return fetch(url)
+                                    .then(response => response.json())
+                                    .then(data => {
+                                        if (data.elements && data.elements.length > 0) {
+                                            // Vraie station trouvée
+                                            return { lat: data.elements[0].lat, lon: data.elements[0].lon, found: true };
+                                        }
+                                        return { lat: stop.lat, lon: stop.lon, found: false };
+                                    })
+                                    .catch(() => ({ lat: stop.lat, lon: stop.lon, found: false }));
+                            });
+
+                            Promise.all(fetchPromises).then(realStations => {
+                                let currentWps = routingControl.getWaypoints().map(w => w.latLng).filter(l => l);
+
+                                if (currentWps.length >= 2) {
+                                    let dest = currentWps.pop(); // Retire temporairement la destination finale
+
+                                    realStations.forEach(st => {
+                                        if (st.found) {
+                                            // Ajoute la vraie borne comme étape forcée du trajet
+                                            currentWps.push(L.latLng(st.lat, st.lon));
+                                        }
+                                    });
+
+                                    currentWps.push(dest); // Remet la destination finale à la fin
+
+                                    // On modifie l'itinéraire ! Leaflet va tracer la nouvelle ligne et relancer l'événement 'routesfound'
+                                    routingControl.setWaypoints(currentWps);
+                                }
+                            });
+
+                            return; // On arrête l'exécution ici pour laisser Leaflet recalculer la nouvelle route
+                        }
+
+                        // --- 2. AFFICHAGE FINAL (DEUXIÈME PASSAGE OU TRAJET DIRECT SANS PANNE) ---
+
+                        // On ajoute le temps de recharge à l'ETA
                         if (simData.chargingTime_s > 0) {
                             currentRouteDuration += simData.chargingTime_s;
-                            updateETAPanel(); // Met à jour l'affichage de l'heure d'arrivée
+                            updateETAPanel();
 
-                            // --- RECHERCHE ET AFFICHAGE DES BORNES RÉELLES ---
                             if (simData.suggestedStops && simData.suggestedStops.length > 0) {
-                                simData.suggestedStops.forEach(async (stop, index) => {
-                                    try {
-                                        // Recherche de bornes de recharge réelles à moins de 5km de la zone de panne
-                                        const query = `
-                                            [out:json];
-                                            node(around:5000, ${stop.lat}, ${stop.lon})["amenity"="charging_station"];
-                                            out 1;
-                                        `;
-                                        const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`;
-                                        const response = await fetch(url);
-                                        const data = await response.json();
+                                simData.suggestedStops.forEach((stop, index) => {
+                                    // Création de l'icône ⚡
+                                    const chargeIcon = L.divIcon({
+                                        className: 'charging-marker',
+                                        html: '<div class="charging-marker-icon">⚡</div>',
+                                        iconSize: [34, 34],
+                                        iconAnchor: [17, 17]
+                                    });
 
-                                        const chargeIcon = L.divIcon({
-                                            className: 'waypoint-btn',
-                                            html: '⚡',
-                                            iconSize: [38, 38],
-                                            iconAnchor: [19, 19],
-                                            style: 'background: white; border: 2px solid #34a853;'
-                                        });
+                                    // Création immédiate du marqueur sur la carte, exactement sur la nouvelle ligne bleue
+                                    let marker = L.marker([stop.lat, stop.lon], {icon: chargeIcon, zIndexOffset: 1500})
+                                        .addTo(map)
+                                        .bindPopup(`<b>Station de recharge (Arrêt ${index + 1})</b><br>Station incluse dans l'itinéraire.`);
 
-                                        if (data.elements && data.elements.length > 0) {
-                                            const realStation = data.elements[0];
-                                            L.marker([realStation.lat, realStation.lon], {icon: chargeIcon, zIndexOffset: 1500})
-                                                .addTo(map)
-                                                .bindPopup(`<b>Station de recharge (Arrêt ${index + 1})</b><br>Détour optimisé.`);
-                                        } else {
-                                            // Si aucune borne listée n'est trouvée, on met un marqueur générique
-                                            L.marker([stop.lat, stop.lon], {icon: chargeIcon, zIndexOffset: 1500})
-                                                .addTo(map)
-                                                .bindPopup(`<b>Zone suggérée pour recharge</b><br>Arrêt ${index + 1}`);
-                                        }
-                                    } catch (e) {
-                                        console.error("Erreur recherche borne réelle", e);
-                                    }
+                                    chargingMarkers.push(marker);
                                 });
                             }
                         }
@@ -1158,6 +1215,12 @@
             routingControl.setWaypoints([]);
             map.removeControl(routingControl);
             routingControl = null;
+        }
+
+        // Nettoyage des marqueurs si la navigation est coupée
+        if (chargingMarkers) {
+            chargingMarkers.forEach(m => map.removeLayer(m));
+            chargingMarkers = [];
         }
 
         document.querySelectorAll('.leaflet-routing-container').forEach(el => el.remove());
