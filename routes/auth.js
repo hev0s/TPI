@@ -63,13 +63,13 @@ router.post("/login", async (req, res) => {
 
         if (match) {
             const token = jwt.sign(
-                { userId: user.id },
+                { userId: user.id, role: user.role || 'user' },
                 JWT_SECRET,
                 { expiresIn: '24h' }
             );
 
-            // Ajout de la langue dans la réponse
-            res.status(200).json({ success: true, token: token, message: 'Connecté !', language: user.language });
+            // La réponse inclut le rôle
+            res.status(200).json({ success: true, token: token, message: 'Connecté !', language: user.language, role: user.role });
         } else {
             res.status(401).json({ error: 'Identifiants incorrects' });
         }

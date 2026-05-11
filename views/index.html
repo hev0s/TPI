@@ -223,6 +223,7 @@
 
                 if (endpoint === 'login') {
                     localStorage.setItem('token', data.token);
+                    localStorage.setItem('role', data.role);
 
                     if (data.language) {
                         setLanguage(data.language);

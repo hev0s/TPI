@@ -219,3 +219,39 @@ export async function getBaseVehicleData(vehiculeId) {
         throw err;
     }
 }
+
+// --- FONCTIONS ADMINISTRATEUR ---
+
+export async function createVehiculeAdmin(brand, model, battery_capacity, base_consumption, air_drag) {
+    try {
+        const [result] = await db.query(
+            'INSERT INTO vehicule (brand, model, battery_capacity, base_consumption, air_drag) VALUES (?,?,?,?,?)',
+            [brand, model, battery_capacity, base_consumption, air_drag]
+        );
+        return result.insertId;
+    } catch (err) {
+        console.error('Erreur createVehiculeAdmin:', err.message);
+        throw err;
+    }
+}
+
+export async function updateVehiculeAdmin(id, brand, model, battery_capacity, base_consumption, air_drag) {
+    try {
+        await db.query(
+            'UPDATE vehicule SET brand=?, model=?, battery_capacity=?, base_consumption=?, air_drag=? WHERE id=?',
+            [brand, model, battery_capacity, base_consumption, air_drag, id]
+        );
+    } catch (err) {
+        console.error('Erreur updateVehiculeAdmin:', err.message);
+        throw err;
+    }
+}
+
+export async function deleteVehiculeAdmin(id) {
+    try {
+        await db.query('DELETE FROM vehicule WHERE id=?', [id]);
+    } catch (err) {
+        console.error('Erreur deleteVehiculeAdmin:', err.message);
+        throw err;
+    }
+}

@@ -7,6 +7,7 @@ import cors from 'cors';
 import authRoutes from "./routes/auth.js";
 import navigationRoutes from "./routes/navigation.js";
 import calculsRoutes from "./routes/calculs.js";
+import adminRoutes from "./routes/admin.js";
 
 const app = express();
 const __filename = fileURLToPath(import.meta.url);
@@ -22,11 +23,15 @@ app.use(cors({
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'views/index.html'));
 });
+app.get('/admin', (req, res) => {
+    res.sendFile(path.join(__dirname, 'views/admin.html'));
+});
 
 // API
 app.use('/api', authRoutes);
 app.use('/api/navigation', navigationRoutes);
 app.use('/api/calculs', calculsRoutes);
+app.use('/api/admin', adminRoutes);
 
 const PORT = 3000;
 app.listen(PORT, () => {
