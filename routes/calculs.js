@@ -39,6 +39,124 @@ function getDistance(lon1, lat1, lon2, lat2) {
     return R * c;
 }
 
+// Fonction pour convertir les différentes écritures de maxspeed d'Overpass en nombre entier
+function parseSpeedLimit(maxspeedStr) {
+    if (!maxspeedStr) return null;
+    const maxspeed = maxspeedStr.toLowerCase();
+
+    if (maxspeed === "none") return 130; // Ex: Autobahn sans limite, on simule à 130 max
+
+    if (maxspeed.includes("mph")) {
+        const match = maxspeed.match(/(\d+)/);
+        return match ? Math.round(parseInt(match[0], 10) * 1.60934) : null;
+    }
+
+    if (maxspeed.includes("urban") || maxspeed.includes("city")) return 50;
+    if (maxspeed.includes("living_street") || maxspeed.includes("walk")) return 20;
+    if (maxspeed.includes("rural") || maxspeed.includes("national")) return 80;
+    if (maxspeed.includes("expressway") || maxspeed.includes("trunk")) return 100;
+    if (maxspeed.includes("motorway")) return 120;
+
+    // Utilisation d'une Regex pour extraire le premier nombre trouvé
+    // Gère "30", "CH:30", "30 @ (Mo-Fr 07:00-17:00)", etc.
+    const match = maxspeed.match(/(\d+)/);
+    return match ? parseInt(match[0], 10) : null;
+}
+
+// Fonction de requête groupée à Overpass (Version anti-superposition 3D)
+async function enrichSegmentsWithOverpassBatched(segments, coordinates) {
+    if (!coordinates || coordinates.length === 0) return;
+
+    // Trouver combien de points GPS composent un segment en moyenne
+    const ptsPerSegment = Math.max(1, Math.floor(coordinates.length / segments.length));
+
+    // Construction d'une requête Overpass unique contenant tous les points centraux des segments
+    let overpassQuery = "[out:json];\n(\n";
+    segments.forEach((seg, i) => {
+        // 1. On prend un point au centre du segment
+        const midIdx = Math.min(Math.floor((i + 0.5) * ptsPerSegment), coordinates.length - 1);
+
+        // 2. On prend un deuxième point juste à côté (pour créer un vecteur/une ligne)
+        // L'espacement permet d'ignorer les routes perpendiculaires
+        const nextIdx = Math.min(midIdx + 2, coordinates.length - 1);
+
+        const [lon1, lat1] = coordinates[midIdx];
+        const [lon2, lat2] = coordinates[nextIdx];
+
+        seg.centerLat = lat1;
+        seg.centerLon = lon1;
+
+        // 3. MAGIE : La route DOIT passer par les DEUX points (rayon très strict de 5m).
+        // Une route qui passe au-dessus ou en-dessous ne touchera qu'un seul des deux points !
+        overpassQuery += `  way(around:5, ${lat1}, ${lon1})(around:5, ${lat2}, ${lon2})["highway"];\n`;
+    });
+    overpassQuery += ");\nout tags center;"; // "center" retourne le point central du way pour l'association
+
+    try {
+        const response = await fetch("https://overpass-api.de/api/interpreter", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: `data=${encodeURIComponent(overpassQuery)}`
+        });
+
+        if (!response.ok) throw new Error("Erreur de connexion à l'API Overpass");
+        const data = await response.json();
+
+        // Si l'API retourne des routes, on les lie à nos segments
+        if (data.elements && data.elements.length > 0) {
+            segments.forEach(seg => {
+                let closestWay = null;
+                let minDistance = Infinity;
+
+                // Trouver le chemin renvoyé le plus proche de notre segment
+                data.elements.forEach(el => {
+                    if (el.tags && el.center) {
+                        const dist = getDistance(seg.centerLon, seg.centerLat, el.center.lon, el.center.lat);
+                        if (dist < minDistance) {
+                            minDistance = dist;
+                            closestWay = el.tags;
+                        }
+                    }
+                });
+
+                // Si on a trouvé une route valide
+                if (closestWay) {
+                    seg.isTunnel = closestWay.tunnel === "yes";
+                    seg.isBridge = closestWay.bridge === "yes";
+
+                    // On cherche la vitesse dans cet ordre de priorité :
+                    // 1. Limite conditionnelle (ex: écoles à certaines heures)
+                    // 2. Limite de zone (ex: Zone 30)
+                    // 3. Limite standard (maxspeed)
+                    const rawSpeedTag = closestWay['maxspeed:conditional'] || closestWay['zone:maxspeed'] || closestWay.maxspeed;
+
+                    const realSpeed = parseSpeedLimit(rawSpeedTag);
+
+                    if (realSpeed) {
+                        // La limite de vitesse est explicitement écrite sur la route
+                        seg.speed = realSpeed;
+                    } else {
+                        // Pas de limite explicite : on déduit la vitesse selon le type de route (Ville)
+                        const typeRoute = closestWay.highway;
+
+                        if (typeRoute === "residential") {
+                            seg.speed = 50; // Quartier résidentiel classique
+                        } else if (typeRoute === "living_street") {
+                            seg.speed = 20; // Zone de rencontre
+                        } else if (typeRoute === "pedestrian") {
+                            seg.speed = 10; // Zone piétonne (si la voiture y a accès)
+                        } else if (typeRoute === "motorway" || typeRoute === "motorway_link") {
+                            seg.speed = 120; // Autoroute non taguée (Sécurité)
+                        }
+                    }
+                }
+            });
+        }
+    } catch (e) {
+        console.error("Erreur lors de la récupération Overpass (Limites/Tunnels) :", e.message);
+    }
+}
+
 router.post('/simulate', verifyToken, async (req, res) => {
     try {
         const { carId, routeSegments, routeType, allowStops, coordinates } = req.body;
@@ -218,6 +336,10 @@ router.post('/simulate', verifyToken, async (req, res) => {
             }
         }
 
+        // --- ENRICHISSEMENT OVERPASS (VRAIES VITESSES ET TUNNELS ET PONTS) ---
+        // On effectue la recherche optimisée avant d'entamer le calcul physique
+        await enrichSegmentsWithOverpassBatched(routeSegments, coordinates);
+
         // Récupérer les données du véhicule depuis la BDD
         let carData = await getUserVehicleData(req.userId, carId);
 
@@ -258,12 +380,30 @@ router.post('/simulate', verifyToken, async (req, res) => {
         let chargingTime_s = 0;
         let stopsNeeded = 0;
 
+        // Variables pour la distance
+        let cumulativeDistance = 0;
+        const totalDistance = routeSegments.reduce((sum, seg) => sum + seg.distance, 0);
+
         // On simule chaque segment du trajet
         for (let i = 0; i < routeSegments.length; i++) {
             const segment = routeSegments[i];
+
+            // La vitesse a été lissée ou remplacée par la limitation réelle Overpass
             const v = (segment.speed || 80) / 3.6; // km/h -> m/s
-            const penteEnPourcentage = segment.slope || 0;
+
+            let penteEnPourcentage = segment.slope || 0;
+            let localCx = cx; // Copie de l'aérodynamisme du véhicule pour l'altérer localement
+
+            // GESTION DU CAHIER DES CHARGES : TUNNELS
+            if (segment.isTunnel) {
+                penteEnPourcentage = 0; // Force la pente à 0%
+                localCx = 0; // Annule l'impact de l'aérodynamisme
+            }
+
             const distance_m = segment.distance;
+
+            // Ajout de la distance cumulée pour la précision du GPS
+            cumulativeDistance += distance_m;
 
             // Calcul de l'angle de la pente en radians
             const alpha = Math.atan(penteEnPourcentage / 100);
@@ -277,7 +417,7 @@ router.post('/simulate', verifyToken, async (req, res) => {
                - Cx : Coefficient de pénétration dans l'air (aérodynamisme)
                - v^2 : Vitesse au carré. C'est pourquoi la consommation explose à haute vitesse.
                ==================================================================== */
-            const F_aero = 0.5 * RHO_AIR * surfaceFrontale * cx * Math.pow(v, 2);
+            const F_aero = 0.5 * RHO_AIR * surfaceFrontale * localCx * Math.pow(v, 2);
 
             /* ====================================================================
                2. RÉSISTANCE AU ROULEMENT (F_roulement)
@@ -389,7 +529,7 @@ router.post('/simulate', verifyToken, async (req, res) => {
             // --- SUIVI DE LA BATTERIE POUR LES ARRETS ---
             const deltaSoCSegment = (segmentEnergy / capaciteBatterieUtile) * 100;
 
-            // ANTICIPATION : Si ce segment risque de nous faire tomber sous les 10%, on s'arrête recharger AVANT de le parcourir.
+            // Si ce segment risque de nous faire tomber sous les 10%, on s'arrête recharger AVANT de le parcourir.
             if (allowStops && (currentSoC - deltaSoCSegment <= 10)) {
                 stopsNeeded++;
 
@@ -400,9 +540,12 @@ router.post('/simulate', verifyToken, async (req, res) => {
 
                 currentSoC = 80; // La voiture fait le plein jusqu'à 80% avant de continuer
 
-                // On récupère les coordonnées GPS du début de ce segment pour placer la borne sur la carte
-                if (coordinates && coordinates.length > 0) {
-                    const coordIndex = Math.floor((i / routeSegments.length) * coordinates.length);
+                // Calcul proportionnel sur la base de la distance (BEAUCOUP plus précis que l'index simple)
+                if (coordinates && coordinates.length > 0 && totalDistance > 0) {
+                    const distanceRatio = cumulativeDistance / totalDistance;
+                    let coordIndex = Math.floor(distanceRatio * (coordinates.length - 1));
+                    coordIndex = Math.max(0, Math.min(coordinates.length - 1, coordIndex));
+
                     const stopPoint = coordinates[coordIndex];
                     if (stopPoint) {
                         suggestedStops.push({ lat: stopPoint[1], lon: stopPoint[0] });
