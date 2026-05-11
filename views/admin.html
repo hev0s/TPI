@@ -163,9 +163,19 @@
 
     async function saveVehicle() {
         const id = document.getElementById('car-id').value;
+        const brand = document.getElementById('car-brand').value.trim();
+        const model = document.getElementById('car-model').value.trim();
+        const msgBox = document.getElementById('admin-msg');
+
+        if (!brand || !model) {
+            msgBox.style.color = "red";
+            msgBox.innerText = "La marque et le modèle sont obligatoires.";
+            return;
+        }
+
         const payload = {
-            brand: document.getElementById('car-brand').value,
-            model: document.getElementById('car-model').value,
+            brand: brand,
+            model: model,
             battery_capacity: document.getElementById('car-battery').value || null,
             base_consumption: document.getElementById('car-conso').value || null,
             air_drag: document.getElementById('car-cx').value || null

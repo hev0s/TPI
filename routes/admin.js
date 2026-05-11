@@ -48,6 +48,9 @@ router.get('/vehicules/:id', verifyAdmin, async (req, res) => {
 // Créer un véhicule
 router.post('/vehicules', verifyAdmin, async (req, res) => {
     const { brand, model, battery_capacity, base_consumption, air_drag } = req.body;
+    if (!brand || !model) {
+        return res.status(400).json({ error: 'Marque et modèle obligatoires' });
+    }
     try {
         await createVehiculeAdmin(brand, model, battery_capacity, base_consumption, air_drag);
         res.status(201).json({ success: true, message: "Véhicule créé" });
@@ -59,6 +62,9 @@ router.post('/vehicules', verifyAdmin, async (req, res) => {
 // Modifier un véhicule
 router.put('/vehicules/:id', verifyAdmin, async (req, res) => {
     const { brand, model, battery_capacity, base_consumption, air_drag } = req.body;
+    if (!brand || !model) {
+        return res.status(400).json({ error: 'Marque et modèle obligatoires' });
+    }
     try {
         await updateVehiculeAdmin(req.params.id, brand, model, battery_capacity, base_consumption, air_drag);
         res.status(200).json({ success: true, message: "Véhicule mis à jour" });
