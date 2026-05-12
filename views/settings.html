@@ -178,8 +178,8 @@
                                 <span>Batterie: ${car.battery_health}% | Pneus: ${car.tyre}</span>
                             </div>
                             <div style="display: flex; gap: 5px;">
-                                <button class="btn-secondary btn-small" onclick="startCarEdit(${car.id}, '${car.brand} ${car.model}', ${car.battery_health}, '${car.tyre}')">✏️</button>
-                                <button class="btn-danger btn-small" onclick="deleteUserCar(${car.id})">X</button>
+                                <button class="btn-secondary btn-small" aria-label="Modifier" onclick="startCarEdit(${car.id}, '${car.brand} ${car.model}', ${car.battery_health}, '${car.tyre}')">✏️</button>
+                                <button class="btn-danger btn-small" aria-label="Supprimer" onclick="deleteUserCar(${car.id})">X</button>
                             </div>
                         </div>`;
                 });
@@ -344,8 +344,8 @@
                                 <span>${fav.address}</span>
                             </div>
                             <div style="display: flex; gap: 5px;">
-                                <button class="btn-secondary btn-small" onclick="startEdit(${fav.id}, '${safeLabel}', '${safeAddress}')">✏️</button>
-                                <button class="btn-danger btn-small" onclick="deleteFavorite(${fav.id})">X</button>
+                                <button class="btn-secondary btn-small" aria-label="Modifier" onclick="startEdit(${fav.id}, '${safeLabel}', '${safeAddress}')">✏️</button>
+                                <button class="btn-danger btn-small" aria-label="Supprimer" onclick="deleteFavorite(${fav.id})">X</button>
                             </div>
                         </div>`;
                 });

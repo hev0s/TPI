@@ -56,7 +56,7 @@ router.post("/signup", async (req, res) => {
 });
 
 // --- ROUTE LOGIN (Connexion) ---
-router.post("/login", async (req, res) => {
+router.post("/login", loginLimiter, async (req, res) => {
     const { username, password } = req.body;
 
     if (!username || !password) {
