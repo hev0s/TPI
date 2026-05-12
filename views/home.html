@@ -282,7 +282,7 @@
 
 <div id="controls">
     <div id="header-controls" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-        <button id="btn-settings" onclick="window.location.href='settings.html'" style="background: transparent; color: #5f6368; padding: 5px; font-size: 20px; box-shadow: none; min-width: auto;">⚙️</button>
+        <button id="btn-settings" aria-label="Ouvrir les paramètres" onclick="window.location.href='settings.html'" style="background: transparent; color: #5f6368; padding: 5px; font-size: 20px; box-shadow: none; min-width: auto;">⚙️</button>
         <h3 style="margin: 0; color: #202124;">DuckyVolt</h3>
     </div>
 
@@ -776,18 +776,21 @@
         btnUp.type = 'button';
         btnUp.className = 'waypoint-btn';
         btnUp.innerHTML = '↑';
+        btnUp.setAttribute('aria-label', "Déplacer l'étape vers le haut");
         btnUp.onclick = () => moveStop(row, -1);
 
         const btnDown = document.createElement('button');
         btnDown.type = 'button';
         btnDown.className = 'waypoint-btn';
         btnDown.innerHTML = '↓';
+        btnDown.setAttribute('aria-label', "Déplacer l'étape vers le bas");
         btnDown.onclick = () => moveStop(row, 1);
 
         const btnDel = document.createElement('button');
         btnDel.type = 'button';
         btnDel.className = 'waypoint-btn btn-del';
         btnDel.innerHTML = '✕';
+        btnDel.setAttribute('aria-label', "Supprimer l'étape");
         btnDel.onclick = () => row.remove();
 
         row.appendChild(btnUp);

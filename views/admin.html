@@ -93,7 +93,7 @@
 
 <div class="container">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <button class="btn-secondary" style="margin-bottom: 0;" onclick="window.location.href='settings.html'">⬅ Quitter l'admin</button>
+        <button class="btn-secondary" aria-label="Quitter le panneau d'administration" style="margin-bottom: 0;" onclick="window.location.href='settings.html'">⬅ Quitter l'admin</button>
         <h2 style="margin: 0;">🛠️ Panneau Admin</h2>
     </div>
 
@@ -132,8 +132,8 @@
                     <div class="car-item">
                         <div><strong>${car.brand}</strong> ${car.model}</div>
                         <div>
-                            <button class="btn-edit" onclick="editVehicle(${car.id})">Modifier</button>
-                            <button class="btn-danger" onclick="deleteVehicle(${car.id})">Supprimer</button>
+                            <button class="btn-edit" aria-label="Modifier le véhicule ${car.brand} ${car.model}" onclick="editVehicle(${car.id})">Modifier</button>
+                            <button class="btn-danger" aria-label="Supprimer le véhicule ${car.brand} ${car.model}" onclick="deleteVehicle(${car.id})">Supprimer</button>
                         </div>
                     </div>
                 `;

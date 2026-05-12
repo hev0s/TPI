@@ -163,9 +163,9 @@
 
 <div class="container">
     <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px;">
-        <button class="btn-secondary" style="width: auto; margin-bottom: 0; padding: 8px 12px;" onclick="window.location.href='home.html'" data-i18n="back_map">⬅ Retour</button>
+        <button class="btn-secondary" aria-label="Retour à la page d'accueil" style="width: auto; margin-bottom: 0; padding: 8px 12px;" onclick="window.location.href='home.html'" data-i18n="back_map">⬅ Retour</button>
 
-        <button id="btn-admin" class="btn-primary" style="display: none; width: auto; background-color: #f9ab00; margin-bottom: 0; padding: 8px 12px; box-shadow: 0 4px 12px rgba(249, 171, 0, 0.3);" onclick="window.location.href='admin.html'">🛠️ Administration</button>
+        <button id="btn-admin" class="btn-primary" aria-label="Ouvrir le panneau d'administration" style="display: none; width: auto; background-color: #f9ab00; margin-bottom: 0; padding: 8px 12px; box-shadow: 0 4px 12px rgba(249, 171, 0, 0.3);" onclick="window.location.href='admin.html'">🛠️ Administration</button>
 
         <div style="flex-grow: 1;"></div> <select class="lang-selector" onchange="changeLanguageAndUpdate(this.value)">
         <option value="fr">Français</option>
@@ -233,7 +233,7 @@
     </div>
 
     <h3 style="color: #ea4335; border-color: rgba(234, 67, 53, 0.2);" data-i18n="danger_zone">Zone de danger</h3>
-    <button class="btn-danger" onclick="deleteAccount()" data-i18n="delete_account">🗑️ Supprimer mon compte définitivement</button>
+    <button class="btn-danger" aria-label="Supprimer mon compte définitivement" onclick="deleteAccount()" data-i18n="delete_account">🗑️ Supprimer mon compte définitivement</button>
 </div>
 
 <script src="js/translations.js"></script>
@@ -321,8 +321,8 @@
                                 <span>Batterie: ${car.battery_health}% | Pneus: ${car.tyre}</span>
                             </div>
                             <div style="display: flex; gap: 5px;">
-                                <button class="btn-secondary btn-small" onclick="startCarEdit(${car.id}, '${car.brand} ${car.model}', ${car.battery_health}, '${car.tyre}')">✏️</button>
-                                <button class="btn-danger btn-small" onclick="deleteUserCar(${car.id})">X</button>
+                                <button class="btn-secondary btn-small" aria-label="Modifier le véhicule ${car.brand} ${car.model}" onclick="startCarEdit(${car.id}, '${car.brand} ${car.model}', ${car.battery_health}, '${car.tyre}')">✏️</button>
+                                <button class="btn-danger btn-small" aria-label="Supprimer le véhicule ${car.brand} ${car.model}" onclick="deleteUserCar(${car.id})">X</button>
                             </div>
                         </div>
                     `;
@@ -528,8 +528,8 @@
                                 <span>${fav.address}</span>
                             </div>
                             <div style="display: flex; gap: 5px;">
-                                <button class="btn-secondary btn-small" onclick="startEdit(${fav.id}, '${safeLabel}', '${safeAddress}')">✏️</button>
-                                <button class="btn-danger btn-small" onclick="deleteFavorite(${fav.id})">X</button>
+                                <button class="btn-secondary btn-small" aria-label="Modifier le lieu favori ${safeLabel}" onclick="startEdit(${fav.id}, '${safeLabel}', '${safeAddress}')">✏️</button>
+                                <button class="btn-danger btn-small" aria-label="Supprimer le lieu favori ${safeLabel}" onclick="deleteFavorite(${fav.id})">X</button>
                             </div>
                         </div>
                     `;
