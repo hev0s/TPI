@@ -1,6 +1,8 @@
 import express from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import rateLimit from 'express-rate-limit';
+
 import {
     createUser,
     getUserByUsername,
@@ -21,6 +23,15 @@ const router = express.Router();
 const SALT_ROUNDS = 10;
 
 const JWT_SECRET = process.env.JWT_SECRET;
+
+// Configuration pour limiter les tentatives de connexion
+const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // Fenêtre de 15 minutes
+    max: 10, // Limite chaque IP à 10 requêtes par fenêtre
+    message: { error: 'Trop de tentatives de connexion. Veuillez réessayer dans 15 minutes.' },
+    standardHeaders: true, // Retourne les infos de limite dans les headers `RateLimit-*`
+    legacyHeaders: false, // Désactive les headers `X-RateLimit-*`
+});
 
 router.use(express.json());
 

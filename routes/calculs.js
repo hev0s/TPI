@@ -99,7 +99,14 @@ async function enrichSegmentsWithOverpassBatched(segments, coordinates) {
             body: `data=${encodeURIComponent(overpassQuery)}`
         });
 
-        if (!response.ok) throw new Error("Erreur de connexion à l'API Overpass");
+        // --- GESTION D'ERREUR 429 ---
+        if (!response.ok) {
+            if (response.status === 429) {
+                throw new Error("RATE_LIMIT_OVERPASS");
+            }
+            throw new Error("Erreur de connexion à l'API Overpass");
+        }
+
         const data = await response.json();
 
         // Si l'API retourne des routes, on les lie à nos segments
@@ -154,6 +161,8 @@ async function enrichSegmentsWithOverpassBatched(segments, coordinates) {
         }
     } catch (e) {
         console.error("Erreur lors de la récupération Overpass (Limites/Tunnels) :", e.message);
+        // Si c'est une limite d'API, on la relance pour stopper la simulation proprement
+        if (e.message === "RATE_LIMIT_OVERPASS") throw e;
     }
 }
 
@@ -197,98 +206,106 @@ router.post('/simulate', verifyToken, async (req, res) => {
                     })
                 });
 
-                if (orsRes.ok) {
-                    const orsData = await orsRes.json();
-                    if (orsData && orsData.geometry) {
-                        elevations = orsData.geometry; // [lon, lat, altitude]
+                // --- GESTION D'ERREUR 429 ---
+                if (!orsRes.ok) {
+                    if (orsRes.status === 429) {
+                        throw new Error("RATE_LIMIT_ORS");
+                    }
+                    throw new Error(`Erreur API ORS: ${orsRes.status}`);
+                }
 
-                        // --- LISSAGE DES ANOMALIES (PONTS, TUNNELS, ERREURS DEM) ---
-                        const MAX_SLOPE = 0.15; // 15% de pente maximum tolérée
+                const orsData = await orsRes.json();
+                if (orsData && orsData.geometry) {
+                    elevations = orsData.geometry; // [lon, lat, altitude]
 
-                        let index = 0;
-                        while (index < elevations.length - 1) {
-                            const p1 = elevations[index];
-                            const p2 = elevations[index + 1];
+                    // --- LISSAGE DES ANOMALIES (PONTS, TUNNELS, ERREURS DEM) ---
+                    const MAX_SLOPE = 0.15; // 15% de pente maximum tolérée
 
-                            const dist = getDistance(p1[0], p1[1], p2[0], p2[1]);
+                    let index = 0;
+                    while (index < elevations.length - 1) {
+                        const p1 = elevations[index];
+                        const p2 = elevations[index + 1];
 
-                            // Sécurité pour éviter la division par zéro
-                            if (dist === 0) {
-                                index++;
-                                continue;
-                            }
+                        const dist = getDistance(p1[0], p1[1], p2[0], p2[1]);
 
-                            const deltaAlt = p2[2] - p1[2];
-                            const currentSlope = Math.abs(deltaAlt / dist);
-
-                            // Détection de l'anomalie
-                            if (currentSlope > MAX_SLOPE) {
-                                let anomalyStartIndex = index;
-                                let anomalyEndIndex = index + 1;
-                                let foundValidEnd = false;
-
-                                // Recherche du prochain point "logique"
-                                for (let j = index + 2; j < elevations.length; j++) {
-                                    const pTemp = elevations[j];
-                                    const distFromStart = getDistance(p1[0], p1[1], pTemp[0], pTemp[1]);
-                                    if (distFromStart === 0) continue;
-
-                                    const altDiffFromStart = Math.abs(pTemp[2] - p1[2]);
-                                    const theoreticalSlope = altDiffFromStart / distFromStart;
-
-                                    // La pente redevient raisonnable, on a trouvé la sortie
-                                    if (theoreticalSlope <= MAX_SLOPE) {
-                                        anomalyEndIndex = j;
-                                        foundValidEnd = true;
-                                        break;
-                                    }
-                                }
-
-                                // Si on a trouvé la fin de l'anomalie, on "aplatit" par interpolation linéaire
-                                if (foundValidEnd) {
-                                    const startAlt = elevations[anomalyStartIndex][2];
-                                    const endAlt = elevations[anomalyEndIndex][2];
-                                    const steps = anomalyEndIndex - anomalyStartIndex;
-
-                                    for (let k = anomalyStartIndex + 1; k < anomalyEndIndex; k++) {
-                                        const stepCurrent = k - anomalyStartIndex;
-                                        elevations[k][2] = startAlt + (stepCurrent * ((endAlt - startAlt) / steps));
-                                    }
-                                    index = anomalyEndIndex;
-                                } else {
-                                    index++;
-                                }
-                            } else {
-                                index++;
-                            }
+                        // Sécurité pour éviter la division par zéro
+                        if (dist === 0) {
+                            index++;
+                            continue;
                         }
 
-                        // --- MAPPING DES PENTES LISSÉES SUR LES SEGMENTS ---
-                        const ptsPerSegment = Math.max(1, Math.floor(elevations.length / routeSegments.length));
-                        for (let i = 0; i < routeSegments.length; i++) {
-                            const startIdx = Math.min(i * ptsPerSegment, elevations.length - 1);
-                            const endIdx = Math.min((i + 1) * ptsPerSegment, elevations.length - 1);
+                        const deltaAlt = p2[2] - p1[2];
+                        const currentSlope = Math.abs(deltaAlt / dist);
 
-                            if (startIdx < endIdx) {
-                                const startAlt = elevations[startIdx][2];
-                                const endAlt = elevations[endIdx][2];
-                                const dist = routeSegments[i].distance;
+                        // Détection de l'anomalie
+                        if (currentSlope > MAX_SLOPE) {
+                            let anomalyStartIndex = index;
+                            let anomalyEndIndex = index + 1;
+                            let foundValidEnd = false;
 
-                                let slope = dist > 0 ? ((endAlt - startAlt) / dist) * 100 : 0;
+                            // Recherche du prochain point "logique"
+                            for (let j = index + 2; j < elevations.length; j++) {
+                                const pTemp = elevations[j];
+                                const distFromStart = getDistance(p1[0], p1[1], pTemp[0], pTemp[1]);
+                                if (distFromStart === 0) continue;
 
-                                // Lissage de sécurité (pas plus de 15% ou -15%)
-                                if (slope > 15) slope = 15;
-                                if (slope < -15) slope = -15;
+                                const altDiffFromStart = Math.abs(pTemp[2] - p1[2]);
+                                const theoreticalSlope = altDiffFromStart / distFromStart;
 
-                                routeSegments[i].slope = slope;
-                            } else {
-                                routeSegments[i].slope = 0;
+                                // La pente redevient raisonnable, on a trouvé la sortie
+                                if (theoreticalSlope <= MAX_SLOPE) {
+                                    anomalyEndIndex = j;
+                                    foundValidEnd = true;
+                                    break;
+                                }
                             }
+
+                            // Si on a trouvé la fin de l'anomalie, on "aplatit" par interpolation linéaire
+                            if (foundValidEnd) {
+                                const startAlt = elevations[anomalyStartIndex][2];
+                                const endAlt = elevations[anomalyEndIndex][2];
+                                const steps = anomalyEndIndex - anomalyStartIndex;
+
+                                for (let k = anomalyStartIndex + 1; k < anomalyEndIndex; k++) {
+                                    const stepCurrent = k - anomalyStartIndex;
+                                    elevations[k][2] = startAlt + (stepCurrent * ((endAlt - startAlt) / steps));
+                                }
+                                index = anomalyEndIndex;
+                            } else {
+                                index++;
+                            }
+                        } else {
+                            index++;
+                        }
+                    }
+
+                    // --- MAPPING DES PENTES LISSÉES SUR LES SEGMENTS ---
+                    const ptsPerSegment = Math.max(1, Math.floor(elevations.length / routeSegments.length));
+                    for (let i = 0; i < routeSegments.length; i++) {
+                        const startIdx = Math.min(i * ptsPerSegment, elevations.length - 1);
+                        const endIdx = Math.min((i + 1) * ptsPerSegment, elevations.length - 1);
+
+                        if (startIdx < endIdx) {
+                            const startAlt = elevations[startIdx][2];
+                            const endAlt = elevations[endIdx][2];
+                            const dist = routeSegments[i].distance;
+
+                            let slope = dist > 0 ? ((endAlt - startAlt) / dist) * 100 : 0;
+
+                            // Lissage de sécurité (pas plus de 15% ou -15%)
+                            if (slope > 15) slope = 15;
+                            if (slope < -15) slope = -15;
+
+                            routeSegments[i].slope = slope;
+                        } else {
+                            routeSegments[i].slope = 0;
                         }
                     }
                 }
             } catch (e) {
                 console.error("Erreur ORS Elevation :", e);
+                // On relance l'erreur spécifique pour qu'elle soit attrapée par le bloc principal
+                if (e.message === "RATE_LIMIT_ORS") throw e;
             }
         }
 
@@ -581,7 +598,16 @@ router.post('/simulate', verifyToken, async (req, res) => {
         });
 
     } catch (error) {
-        console.error(error);
+        console.error("Erreur de simulation :", error.message || error);
+
+        // --- RETOURS SPECIFIQUES AU FRONT-END ---
+        if (error.message === "RATE_LIMIT_OVERPASS") {
+            return res.status(429).json({ error: "L'API de cartographie (Overpass) est temporairement surchargée. Veuillez réessayer dans quelques instants." });
+        }
+        if (error.message === "RATE_LIMIT_ORS") {
+            return res.status(429).json({ error: "L'API de dénivelé (ORS) a atteint sa limite de requêtes. Veuillez réessayer plus tard." });
+        }
+
         res.status(500).json({ error: 'Erreur lors du calcul de consommation' });
     }
 });
