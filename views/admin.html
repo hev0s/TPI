@@ -4,149 +4,64 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DuckyVolt - Panneau d'Administration</title>
-    <style>
-        body {
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background: linear-gradient(135deg, #e5e3df 0%, #f8f9fa 100%);
-            display: flex;
-            justify-content: center;
-            padding: 20px;
-            margin: 0;
-            min-height: 100vh;
-            box-sizing: border-box;
-            scroll-behavior: smooth;
-        }
+    <link rel="stylesheet" href="/public/css/main.css"> <style>
+    .container { max-width: 800px; }
+    .btn-secondary { padding: 12px 15px; display: flex; align-items: center; }
+    .btn-primary, .btn-secondary { width: auto; margin-bottom: 0; }
+    .btn-danger { padding: 10px 15px; border-radius: 8px; min-height: 44px; width: auto; margin-top: 0; }
+    .btn-edit { background: #f9ab00; color: white; padding: 10px 15px; border: none; border-radius: 8px; cursor: pointer; font-weight: 500; min-height: 44px; width: auto;}
 
-        /* Glassmorphism */
-        .container {
-            background: rgba(255, 255, 255, 0.75) !important;
-            backdrop-filter: blur(16px) !important;
-            -webkit-backdrop-filter: blur(16px) !important;
-            border: 1px solid rgba(255, 255, 255, 0.6) !important;
-            border-radius: 24px;
-            padding: 30px;
-            width: 100%;
-            max-width: 800px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.12) !important;
-            box-sizing: border-box;
-        }
+    .car-list {
+        max-height: 400px; overflow-y: auto; margin-bottom: 20px;
+        background: rgba(248, 249, 250, 0.5); border-radius: 12px; padding: 10px;
+    }
+    .car-item {
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 12px 10px; border-bottom: 1px solid rgba(218, 220, 224, 0.6);
+    }
+    .car-item:last-child { border-bottom: none; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
-        h2 { color: #202124; display: flex; align-items: center; gap: 10px; margin-top:0;}
-        h3 { border-bottom: 1px solid rgba(218, 220, 224, 0.6); padding-bottom: 10px; color: #3c4043; }
-
-        .btn-secondary {
-            background: rgba(241, 243, 244, 0.8);
-            color: #3c4043;
-            padding: 12px 15px;
-            border: 1px solid rgba(218, 220, 224, 0.6);
-            border-radius: 12px;
-            cursor: pointer;
-            margin-bottom: 20px;
-            font-weight: 600;
-            min-height: 48px;
-            display: flex;
-            align-items: center;
-        }
-
-        .btn-primary { background: #1a73e8; color: white; padding: 12px 20px; border: none; border-radius: 12px; cursor: pointer; font-weight: 600; min-height: 48px;}
-        .btn-danger { background: #ea4335; color: white; padding: 10px 15px; border: none; border-radius: 8px; cursor: pointer; font-weight: 500; min-height: 44px;}
-        .btn-edit { background: #f9ab00; color: white; padding: 10px 15px; border: none; border-radius: 8px; cursor: pointer; font-weight: 500; min-height: 44px;}
-
-        input {
-            width: 100%; padding: 14px 12px; margin-bottom: 15px;
-            border: 1px solid rgba(218, 220, 224, 0.6); border-radius: 12px;
-            box-sizing: border-box; font-size: 15px;
-            min-height: 48px;
-            background-color: rgba(255, 255, 255, 0.6);
-            transition: all 0.2s ease;
-        }
-        input:focus { outline: none; border-color: #1a73e8; background-color: white; box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.2); }
-
-        .car-list {
-            max-height: 400px; overflow-y: auto; margin-bottom: 20px;
-            background: rgba(248, 249, 250, 0.5); border-radius: 12px; padding: 10px;
-        }
-        .car-item {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 12px 10px; border-bottom: 1px solid rgba(218, 220, 224, 0.6);
-        }
-        .car-item:last-child { border-bottom: none; }
-
-        .form-grid {
-            display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
-        }
-
-        /* Responsive Mobile & Tablette */
-        @media (max-width: 768px) {
-            body { padding: 10px; }
-            .container {
-                padding: 20px 15px;
-                border-radius: 20px;
-            }
-            .form-grid {
-                grid-template-columns: 1fr;
-            }
-            .car-item {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 12px;
-            }
-            .car-item > div:last-child {
-                display: flex;
-                width: 100%;
-                justify-content: flex-end;
-                gap: 10px;
-            }
-            h2 { font-size: 1.5rem; }
-        }
-    </style>
+    @media (max-width: 768px) {
+        .form-grid { grid-template-columns: 1fr; }
+        .car-item { flex-direction: column; align-items: flex-start; gap: 12px; }
+        .car-item > div:last-child { display: flex; width: 100%; justify-content: flex-end; gap: 10px; }
+    }
+</style>
 </head>
 <body style="display: none;" id="main-body">
 
-<script>
-    const API_URL = "https://tpi-5ter.onrender.com"; // Modifiez selon votre env
+<script src="/public/js/auth.js"></script> <script>
+    // Initialisation avec vérification Admin stricte (true)
+    document.addEventListener('DOMContentLoaded', async () => {
+        const isAuth = await verifyAuth(true);
+        if (isAuth) {
+            loadAllCars();
+        }
+    });
     const token = localStorage.getItem('token');
-
-    // Vérification des droits au chargement de la page
-    if (!token) {
-        window.location.replace('index.html');
-    } else {
-        fetch(`${API_URL}/api/admin/verify`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        }).then(res => {
-            if (res.ok) {
-                document.getElementById('main-body').style.display = 'block';
-                loadAllCars();
-            } else {
-                alert("Accès refusé. Vous n'êtes pas administrateur.");
-                window.location.replace('home.html');
-            }
-        });
-    }
 </script>
 
 <div class="container">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <button class="btn-secondary" aria-label="Quitter le panneau d'administration" style="margin-bottom: 0;" onclick="window.location.href='settings.html'">⬅ Quitter l'admin</button>
+        <button class="btn-secondary" aria-label="Quitter" onclick="window.location.href='settings.html'">⬅ Quitter l'admin</button>
         <h2 style="margin: 0;">🛠️ Panneau Admin</h2>
     </div>
 
-    <div class="car-list" id="admin-cars-list">
-        <p>Chargement des véhicules...</p>
-    </div>
+    <div class="car-list" id="admin-cars-list"><p>Chargement des véhicules...</p></div>
 
     <h3 id="form-title">Ajouter un nouveau véhicule</h3>
     <div class="form-grid">
         <input type="hidden" id="car-id">
         <input type="text" id="car-brand" placeholder="Marque (ex: Tesla)" required>
         <input type="text" id="car-model" placeholder="Modèle (ex: Model 3)" required>
-        <input type="number" step="0.1" id="car-battery" placeholder="Capacité Batterie (kWh) (ex: 75.0)">
-        <input type="number" step="0.1" id="car-conso" placeholder="Conso de base (kWh/100km)">
-        <input type="number" step="0.01" id="car-cx" placeholder="Aérodynamisme (Cx) (ex: 0.23)">
+        <input type="number" step="0.1" min="0" id="car-battery" placeholder="Capacité Batterie (kWh)">
+        <input type="number" step="0.1" min="0" id="car-conso" placeholder="Conso de base (kWh/100km)">
+        <input type="number" step="0.01" min="0" id="car-cx" placeholder="Aérodynamisme (Cx)">
     </div>
     <div style="margin-top: 10px; display:flex; gap:10px;">
         <button class="btn-primary" onclick="saveVehicle()">Enregistrer</button>
-        <button class="btn-secondary" style="margin-bottom:0;" onclick="resetForm()">Annuler</button>
+        <button class="btn-secondary" onclick="resetForm()">Annuler</button>
     </div>
     <p id="admin-msg"></p>
 </div>
@@ -155,33 +70,25 @@
     async function loadAllCars() {
         const list = document.getElementById('admin-cars-list');
         try {
-            // On réutilise la route publique pour lister tous les véhicules
-            const res = await fetch(`${API_URL}/api/vehicules/all`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            const res = await fetch(`${API_URL}/api/vehicules/all`, { headers: { 'Authorization': `Bearer ${token}` } });
             const cars = await res.json();
             list.innerHTML = '';
             cars.forEach(car => {
                 list.innerHTML += `
                     <div class="car-item">
                         <div><strong>${car.brand}</strong> ${car.model}</div>
-                        <div>
-                            <button class="btn-edit" aria-label="Modifier le véhicule ${car.brand} ${car.model}" onclick="editVehicle(${car.id})">Modifier</button>
-                            <button class="btn-danger" aria-label="Supprimer le véhicule ${car.brand} ${car.model}" onclick="deleteVehicle(${car.id})">Supprimer</button>
+                        <div style="display: flex; gap: 5px;">
+                            <button class="btn-edit" onclick="editVehicle(${car.id})">Modifier</button>
+                            <button class="btn-danger" onclick="deleteVehicle(${car.id})">Supprimer</button>
                         </div>
-                    </div>
-                `;
+                    </div>`;
             });
-        } catch (err) {
-            list.innerHTML = '<p style="color:red">Erreur de chargement</p>';
-        }
+        } catch (err) { list.innerHTML = '<p style="color:red">Erreur de chargement</p>'; }
     }
 
     async function editVehicle(id) {
         try {
-            const res = await fetch(`${API_URL}/api/admin/vehicules/${id}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            const res = await fetch(`${API_URL}/api/admin/vehicules/${id}`, { headers: { 'Authorization': `Bearer ${token}` } });
             if(res.ok) {
                 const car = await res.json();
                 document.getElementById('form-title').innerText = "Modifier le véhicule";
@@ -192,27 +99,38 @@
                 document.getElementById('car-conso').value = car.base_consumption;
                 document.getElementById('car-cx').value = car.air_drag;
             }
-        } catch(err) { alert("Erreur lors de la récupération des données."); }
+        } catch(err) { alert("Erreur."); }
     }
 
     async function saveVehicle() {
         const id = document.getElementById('car-id').value;
         const brand = document.getElementById('car-brand').value.trim();
         const model = document.getElementById('car-model').value.trim();
+        const battery = document.getElementById('car-battery').value;
+        const conso = document.getElementById('car-conso').value;
+        const cx = document.getElementById('car-cx').value;
         const msgBox = document.getElementById('admin-msg');
 
+        // 1. Vérification de la présence des champs obligatoires
         if (!brand || !model) {
             msgBox.style.color = "red";
             msgBox.innerText = "La marque et le modèle sont obligatoires.";
             return;
         }
 
+        // 2. Vérification contre les chiffres négatifs
+        if ((battery && battery < 0) || (conso && conso < 0) || (cx && cx < 0)) {
+            msgBox.style.color = "red";
+            msgBox.innerText = "Les valeurs techniques (batterie, conso, Cx) ne peuvent pas être négatives.";
+            return;
+        }
+
         const payload = {
             brand: brand,
             model: model,
-            battery_capacity: document.getElementById('car-battery').value || null,
-            base_consumption: document.getElementById('car-conso').value || null,
-            air_drag: document.getElementById('car-cx').value || null
+            battery_capacity: battery || null,
+            base_consumption: conso || null,
+            air_drag: cx || null
         };
 
         const method = id ? 'PUT' : 'POST';
@@ -225,33 +143,29 @@
                 body: JSON.stringify(payload)
             });
 
+            const data = await res.json(); // On récupère la réponse (qui contient potentiellement notre erreur backend)
+
             if(res.ok) {
-                document.getElementById('admin-msg').style.color = "green";
-                document.getElementById('admin-msg').innerText = "Sauvegardé avec succès !";
+                msgBox.style.color = "green";
+                msgBox.innerText = "Sauvegardé avec succès !";
                 resetForm();
                 loadAllCars();
             } else {
-                throw new Error("Erreur");
+                msgBox.style.color = "red";
+                msgBox.innerText = data.error || "Erreur lors de la sauvegarde.";
             }
         } catch(err) {
-            document.getElementById('admin-msg').style.color = "red";
-            document.getElementById('admin-msg').innerText = "Erreur lors de la sauvegarde.";
+            msgBox.style.color = "red";
+            msgBox.innerText = "Erreur réseau.";
         }
     }
 
     async function deleteVehicle(id) {
-        if(!confirm("Êtes-vous sûr de vouloir supprimer ce véhicule du catalogue ?")) return;
+        if(!confirm("Supprimer ce véhicule du catalogue ?")) return;
         try {
-            const res = await fetch(`${API_URL}/api/admin/vehicules/${id}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if(res.ok) {
-                loadAllCars();
-            } else {
-                alert("Erreur: Le véhicule est probablement encore utilisé par un utilisateur.");
-            }
-        } catch(err) { alert("Erreur réseau"); }
+            const res = await fetch(`${API_URL}/api/admin/vehicules/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+            if(res.ok) loadAllCars();
+        } catch(err) { alert("Erreur."); }
     }
 
     function resetForm() {

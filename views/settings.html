@@ -4,197 +4,55 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DuckyVolt - Paramètres</title>
+    <link rel="stylesheet" href="/public/css/main.css">
     <style>
-        body {
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background: linear-gradient(135deg, #e5e3df 0%, #f8f9fa 100%);
-            display: flex;
-            justify-content: center;
-            padding: 20px;
-            margin: 0;
-            min-height: 100vh;
-            box-sizing: border-box;
-            scroll-behavior: smooth;
-        }
-
-        /* Glassmorphism */
-        .container, .lang-selector, .autocomplete-list, .form-fav-container, .form-car-container {
-            background: rgba(255, 255, 255, 0.75) !important;
-            backdrop-filter: blur(16px) !important;
-            -webkit-backdrop-filter: blur(16px) !important;
-            border: 1px solid rgba(255, 255, 255, 0.6) !important;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12) !important;
-        }
-
-        .container {
-            border-radius: 24px;
-            padding: 30px;
-            width: 100%;
-            max-width: 500px;
-            margin-top: 20px;
-            box-sizing: border-box;
-        }
-
-        .lang-selector {
-            padding: 8px 12px;
-            border-radius: 12px;
-            font-size: 14px;
-            color: #202124;
-            cursor: pointer;
-            outline: none;
-            min-height: 48px; /* Touch friendly */
-        }
-
-        h2 { margin-top: 0; color: #202124; display: flex; align-items: center; gap: 10px; }
-        h3 { border-bottom: 1px solid rgba(218, 220, 224, 0.6); padding-bottom: 10px; color: #3c4043; margin-top: 30px; }
-
-        input, .form-control {
-            width: 100%;
-            padding: 12px;
-            margin-bottom: 15px;
-            border: 1px solid rgba(218, 220, 224, 0.6);
-            border-radius: 12px;
-            box-sizing: border-box;
-            font-size: 15px;
-            background-color: rgba(255, 255, 255, 0.6);
-            transition: all 0.2s ease;
-            color: #202124;
-            font-family: inherit;
-            min-height: 48px; /* Touch friendly */
-        }
-
-        input:focus, .form-control:focus {
-            outline: none;
-            border-color: #1a73e8;
-            background-color: white;
-            box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.2);
-        }
-
-        button {
-            padding: 12px 20px;
-            cursor: pointer;
-            border: none;
-            border-radius: 12px;
-            font-size: 15px;
-            font-weight: 600;
-            width: 100%;
-            transition: transform 0.1s, box-shadow 0.2s;
-            min-height: 48px; /* Touch friendly */
-        }
-
-        button:active { transform: scale(0.97); }
-
-        .btn-primary { background: #1a73e8; color: white; box-shadow: 0 4px 12px rgba(26, 115, 232, 0.2); }
-        .btn-primary:hover { box-shadow: 0 6px 16px rgba(26, 115, 232, 0.3); }
-
-        .btn-danger { background: #ea4335; color: white; margin-top: 10px; box-shadow: 0 4px 12px rgba(234, 67, 53, 0.2); }
-        .btn-danger:hover { box-shadow: 0 6px 16px rgba(234, 67, 53, 0.3); }
-
-        .btn-secondary {
-            background: rgba(241, 243, 244, 0.8);
-            color: #3c4043;
-            margin-bottom: 20px;
-            display: inline-block;
-            border: 1px solid rgba(218, 220, 224, 0.6);
-        }
-
+        /* Styles spécifiques UNIQUEMENT pour la page settings */
         .btn-small { width: auto; padding: 8px 12px; font-size: 13px; margin:0; }
-
         .fav-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 10px; border-bottom: 1px solid rgba(241, 243, 244, 0.6); }
         .fav-item:last-child { border-bottom: none; }
         .fav-info strong { color: #202124; display: block; }
         .fav-info span { font-size: 13px; color: #5f6368; }
         .msg { font-size: 14px; margin-top: 5px; }
 
-        .form-fav-container, .form-car-container {
-            padding: 15px;
-            border-radius: 16px;
-        }
+        .form-fav-container, .form-car-container { padding: 15px; border-radius: 16px; }
 
-        .autocomplete-wrapper { position: relative; width: 100%; }
-        .autocomplete-list {
-            position: absolute; top: 100%; left: 0; right: 0;
-            border-radius: 12px;
-            z-index: 2000; list-style: none; margin: -10px 0 15px 0; padding: 0; max-height: 200px; overflow-y: auto;
-        }
-        .autocomplete-list li { padding: 12px 16px; cursor: pointer; border-bottom: 1px solid rgba(241, 243, 244, 0.6); font-size: 14px; color: #3c4043; line-height: 1.4; }
-        .autocomplete-list li:hover { background-color: rgba(248, 249, 250, 0.8); color: #1a73e8; }
-        .autocomplete-list li:last-child { border-bottom: none; }
-
-        /* Responsive Mobile & Tablette */
+        /* Responsive spécifique */
         @media (max-width: 768px) {
-            body {
-                padding: 10px;
-                align-items: flex-start;
-            }
-
-            .container {
-                padding: 20px 15px;
-                margin-top: 10px;
-                border-radius: 20px;
-            }
-
-            .fav-item {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 12px;
-            }
-
-            .fav-item > div:last-child {
-                width: 100%;
-                display: flex;
-                justify-content: flex-end;
-            }
-
+            .fav-item { flex-direction: column; align-items: flex-start; gap: 12px; }
+            .fav-item > div:last-child { width: 100%; display: flex; justify-content: flex-end; }
             h2 { font-size: 1.5rem; flex-wrap: wrap; }
-
-            .lang-selector {
-                width: 100%;
-                margin-top: 10px;
-            }
+            .lang-selector { width: 100%; margin-top: 10px; }
         }
     </style>
 </head>
 <body style="display: none;" id="main-body">
 
+<script src="/public/js/auth.js"></script>
+<script src="/public/js/translations.js"></script>
 <script>
-    const API_URL = "https://tpi-5ter.onrender.com";
-    const token = localStorage.getItem('token');
-
-    if (!token) {
-        window.location.replace('index.html');
-    } else {
-        fetch(`${API_URL}/api/verify`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        }).then(res => {
-            if (res.ok) {
-                document.getElementById('main-body').style.display = 'block';
-
-                // --- VÉRIFICATION DU RÔLE ADMIN ---
-                if (localStorage.getItem('role') === 'admin') {
-                    document.getElementById('btn-admin').style.display = 'block';
-                }
-
-                loadFavorites();
-                loadUserCars();
-            } else {
-                window.location.replace('index.html');
+    document.addEventListener('DOMContentLoaded', async () => {
+        const isAuth = await verifyAuth(false);
+        if (isAuth) {
+            if (localStorage.getItem('role') === 'admin') {
+                document.getElementById('btn-admin').style.display = 'block';
             }
-        });
-    }
+            loadFavorites();
+            loadUserCars();
+        }
+    });
+    const token = localStorage.getItem('token');
 </script>
 
 <div class="container">
     <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
         <button class="btn-secondary" aria-label="Retour à la page d'accueil" style="width: auto; margin-bottom: 0; padding: 8px 12px;" onclick="window.location.href='home.html'" data-i18n="back_map">⬅ Retour</button>
-
         <button id="btn-admin" class="btn-primary" aria-label="Ouvrir le panneau d'administration" style="display: none; width: auto; background-color: #f9ab00; margin-bottom: 0; padding: 8px 12px; box-shadow: 0 4px 12px rgba(249, 171, 0, 0.3);" onclick="window.location.href='admin.html'">🛠️ Administration</button>
-
         <div style="flex-grow: 1;"></div>
         <select class="lang-selector" onchange="changeLanguageAndUpdate(this.value)">
             <option value="fr">Français</option>
             <option value="en">English</option>
             <option value="de">Deutsch</option>
+            <option value="it">Italiano</option>
         </select>
     </div>
 
@@ -213,11 +71,9 @@
     <div class="form-fav-container">
         <h4 id="form-fav-title" style="margin-top: 0; margin-bottom: 10px;" data-i18n="add_fav">Ajouter un favori</h4>
         <input type="text" id="fav-label" data-i18n-placeholder="fav_name" placeholder="Nom (ex: Maison, Travail)">
-
         <div class="autocomplete-wrapper">
             <input type="text" id="fav-address" data-i18n-placeholder="fav_address" placeholder="Adresse complète" autocomplete="off">
         </div>
-
         <div style="display: flex; gap: 10px;">
             <button id="btn-save-fav" class="btn-primary" onclick="saveFavorite()" data-i18n="btn_add">Ajouter</button>
             <button id="btn-cancel-edit" class="btn-secondary" style="display: none; margin-bottom: 0;" onclick="cancelEdit()">Annuler</button>
@@ -233,22 +89,18 @@
     <div class="form-car-container" style="margin-bottom: 30px;">
         <h4 id="form-car-title" style="margin-top: 0; margin-bottom: 10px;">Ajouter un véhicule</h4>
         <label style="font-size: 14px; color: #3c4043; margin-bottom: 5px; display: block; font-weight: 500;">Rechercher votre modèle</label>
-
         <div class="autocomplete-wrapper">
             <input type="text" id="car-search" placeholder="Tapez au moins 3 caractères (ex: Tesla...)" autocomplete="off">
             <input type="hidden" id="car-id-selected">
         </div>
-
         <label style="font-size: 14px; color: #3c4043; margin-top: 15px; margin-bottom: 5px; display: block; font-weight: 500;">État de la batterie (%)</label>
         <input type="number" id="car-battery" placeholder="Ex: 95" min="1" max="100" value="100">
-
         <label for="tire-select" style="font-size: 14px; color: #3c4043; margin-top: 15px; margin-bottom: 5px; display: block; font-weight: 500;">Type de pneus</label>
         <select id="tire-select" class="form-control">
             <option value="summer">Pneus Été (Summer)</option>
             <option value="winter">Pneus Hiver (Winter)</option>
             <option value="all_season">Toutes saisons (All season)</option>
         </select>
-
         <div style="display: flex; gap: 10px;">
             <button id="btn-save-car" class="btn-primary" onclick="saveCar()" data-i18n="btn_save_car">Enregistrer le véhicule</button>
             <button id="btn-cancel-car" class="btn-secondary" style="display: none; margin-bottom: 0;" onclick="cancelCarEdit()">Annuler</button>
@@ -260,7 +112,6 @@
     <button class="btn-danger" aria-label="Supprimer mon compte définitivement" onclick="deleteAccount()" data-i18n="delete_account">🗑️ Supprimer mon compte définitivement</button>
 </div>
 
-<script src="js/translations.js"></script>
 <script>
     async function changeLanguageAndUpdate(lang) {
         setLanguage(lang);
@@ -270,9 +121,7 @@
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify({ language: lang })
             });
-        } catch (err) {
-            console.error("Erreur lors de la sauvegarde de la langue", err);
-        }
+        } catch (err) { console.error("Erreur langue", err); }
     }
 
     async function updateUsername() {
@@ -287,36 +136,22 @@
                 body: JSON.stringify({ newUsername })
             });
             const data = await res.json();
-
-            if (res.ok) {
-                msgBox.style.color = "green";
-                msgBox.innerText = "Pseudo mis à jour !";
-            } else {
-                msgBox.style.color = "red";
-                msgBox.innerText = data.error || "Erreur lors de la mise à jour.";
-            }
-        } catch (err) {
-            msgBox.style.color = "red"; msgBox.innerText = "Erreur de connexion.";
-        }
+            if (res.ok) { msgBox.style.color = "green"; msgBox.innerText = "Pseudo mis à jour !"; }
+            else { msgBox.style.color = "red"; msgBox.innerText = data.error || "Erreur."; }
+        } catch (err) { msgBox.style.color = "red"; msgBox.innerText = "Erreur."; }
     }
 
     async function deleteAccount() {
-        if(!confirm("Êtes-vous sûr de vouloir supprimer DÉFINITIVEMENT votre compte ? Cette action est irréversible.")) return;
-
+        if(!confirm("Supprimer DÉFINITIVEMENT votre compte ?")) return;
         try {
             const res = await fetch(`${API_URL}/api/user`, {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (res.ok) {
-                localStorage.removeItem('token');
-                window.location.replace('index.html');
-            } else {
-                alert("Erreur lors de la suppression du compte.");
-            }
-        } catch (err) {
-            alert("Erreur de connexion.");
-        }
+                logout(); // Utilise la fonction de auth.js
+            } else { alert("Erreur lors de la suppression."); }
+        } catch (err) { alert("Erreur de connexion."); }
     }
 
     let carAutocompleteTimeout = null;
@@ -327,9 +162,7 @@
     async function loadUserCars() {
         const listContainer = document.getElementById('user-cars-list');
         try {
-            const res = await fetch(`${API_URL}/api/vehicules`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            const res = await fetch(`${API_URL}/api/vehicules`, { headers: { 'Authorization': `Bearer ${token}` } });
             if (res.ok) {
                 const cars = await res.json();
                 listContainer.innerHTML = '';
@@ -345,16 +178,13 @@
                                 <span>Batterie: ${car.battery_health}% | Pneus: ${car.tyre}</span>
                             </div>
                             <div style="display: flex; gap: 5px;">
-                                <button class="btn-secondary btn-small" aria-label="Modifier le véhicule ${car.brand} ${car.model}" onclick="startCarEdit(${car.id}, '${car.brand} ${car.model}', ${car.battery_health}, '${car.tyre}')">✏️</button>
-                                <button class="btn-danger btn-small" aria-label="Supprimer le véhicule ${car.brand} ${car.model}" onclick="deleteUserCar(${car.id})">X</button>
+                                <button class="btn-secondary btn-small" onclick="startCarEdit(${car.id}, '${car.brand} ${car.model}', ${car.battery_health}, '${car.tyre}')">✏️</button>
+                                <button class="btn-danger btn-small" onclick="deleteUserCar(${car.id})">X</button>
                             </div>
-                        </div>
-                    `;
+                        </div>`;
                 });
             }
-        } catch (err) {
-            listContainer.innerHTML = '<p style="color: red;">Erreur de chargement.</p>';
-        }
+        } catch (err) { listContainer.innerHTML = '<p style="color: red;">Erreur.</p>'; }
     }
 
     carSearchInput.addEventListener('input', function() {
@@ -387,7 +217,7 @@
                     });
                     list.appendChild(item);
                 });
-            } catch (err) { console.error("Erreur recherche véhicules:", err); }
+            } catch (err) { console.error(err); }
         }, 300);
     });
 
@@ -400,7 +230,6 @@
         document.getElementById('tire-select').value = tyre;
         document.getElementById('btn-save-car').innerText = "Mettre à jour";
         document.getElementById('btn-cancel-car').style.display = "block";
-        carSearchInput.disabled = false;
         document.querySelector('.form-car-container').scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 
@@ -412,7 +241,6 @@
         document.getElementById('car-battery').value = 100;
         document.getElementById('btn-save-car').innerText = "Enregistrer le véhicule";
         document.getElementById('btn-cancel-car').style.display = "none";
-        carSearchInput.disabled = false;
         document.getElementById('msg-car').innerText = "";
     }
 
@@ -423,74 +251,54 @@
         const msgBox = document.getElementById('msg-car');
 
         if(!newCarId || !battery_health) {
-            msgBox.style.color = "red";
-            msgBox.innerText = "Veuillez remplir tous les champs.";
+            msgBox.style.color = "red"; msgBox.innerText = "Remplissez tous les champs.";
             return;
         }
 
         const url = editCarId ? `${API_URL}/api/updateVehicule/${editCarId}` : `${API_URL}/api/user/car`;
-        const method = 'PUT';
-
         try {
             const res = await fetch(url, {
-                method: method,
+                method: 'PUT',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify({ carId: newCarId, battery_health, tireType })
             });
 
             if (res.ok) {
-                msgBox.style.color = "green";
-                msgBox.innerText = editCarId ? "Véhicule mis à jour avec succès !" : "Véhicule ajouté !";
+                msgBox.style.color = "green"; msgBox.innerText = editCarId ? "Mis à jour !" : "Véhicule ajouté !";
                 cancelCarEdit();
                 loadUserCars();
-            } else {
-                msgBox.style.color = "red";
-                msgBox.innerText = "Erreur lors de la sauvegarde.";
-            }
-        } catch (err) {
-            msgBox.style.color = "red";
-            msgBox.innerText = "Erreur de connexion.";
-        }
+            } else { msgBox.style.color = "red"; msgBox.innerText = "Erreur."; }
+        } catch (err) { msgBox.style.color = "red"; msgBox.innerText = "Erreur de connexion."; }
     }
 
     async function deleteUserCar(id) {
         if(!confirm("Supprimer ce véhicule ?")) return;
         try {
             const res = await fetch(`${API_URL}/api/user/vehicule/${id}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` }
+                method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` }
             });
             if(res.ok) loadUserCars();
         } catch (err) { console.error(err); }
     }
 
     let autocompleteTimeout = null;
-
     document.getElementById('fav-address').addEventListener('input', function(e) {
         const input = e.target;
         const val = input.value;
-
-        if (!val || val.length < 3) {
-            closeAllLists();
-            return;
-        }
+        if (!val || val.length < 3) { closeAllLists(); return; }
 
         clearTimeout(autocompleteTimeout);
-
         autocompleteTimeout = setTimeout(async () => {
             try {
-                let requestBody = { text: val };
-
                 const response = await fetch(`${API_URL}/api/navigation/autocomplete`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                    body: JSON.stringify(requestBody)
+                    body: JSON.stringify({ text: val })
                 });
 
                 if (response.ok) {
                     const suggestions = await response.json();
                     closeAllLists();
-
                     if (suggestions.length === 0) return;
 
                     const list = document.createElement('ul');
@@ -502,11 +310,7 @@
                         const item = document.createElement('li');
                         const cleanText = cleanSuggest.split(',').slice(0, 3).join(',');
                         item.innerText = cleanText;
-
-                        item.addEventListener('click', () => {
-                            input.value = cleanText;
-                            closeAllLists();
-                        });
+                        item.addEventListener('click', () => { input.value = cleanText; closeAllLists(); });
                         list.appendChild(item);
                     });
                 }
@@ -514,34 +318,22 @@
         }, 400);
     });
 
-    function closeAllLists() {
-        const lists = document.querySelectorAll('.autocomplete-list');
-        lists.forEach(l => l.remove());
-    }
-
-    document.addEventListener('click', function(e) {
-        if (!e.target.closest('.autocomplete-wrapper')) {
-            closeAllLists();
-        }
-    });
+    function closeAllLists() { document.querySelectorAll('.autocomplete-list').forEach(l => l.remove()); }
+    document.addEventListener('click', function(e) { if (!e.target.closest('.autocomplete-wrapper')) closeAllLists(); });
 
     let editFavoriteId = null;
 
     async function loadFavorites() {
         const listContainer = document.getElementById('favorites-list');
         try {
-            const res = await fetch(`${API_URL}/api/navigation/favorites`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            const res = await fetch(`${API_URL}/api/navigation/favorites`, { headers: { 'Authorization': `Bearer ${token}` } });
             if (res.ok) {
                 const favorites = await res.json();
                 listContainer.innerHTML = '';
-
                 if(favorites.length === 0) {
                     listContainer.innerHTML = '<p style="color: #5f6368; font-size: 14px;">Aucun favori enregistré.</p>';
                     return;
                 }
-
                 favorites.forEach(fav => {
                     const safeLabel = fav.label.replace(/'/g, "\\'");
                     const safeAddress = fav.address.replace(/'/g, "\\'");
@@ -552,16 +344,13 @@
                                 <span>${fav.address}</span>
                             </div>
                             <div style="display: flex; gap: 5px;">
-                                <button class="btn-secondary btn-small" aria-label="Modifier le lieu favori ${safeLabel}" onclick="startEdit(${fav.id}, '${safeLabel}', '${safeAddress}')">✏️</button>
-                                <button class="btn-danger btn-small" aria-label="Supprimer le lieu favori ${safeLabel}" onclick="deleteFavorite(${fav.id})">X</button>
+                                <button class="btn-secondary btn-small" onclick="startEdit(${fav.id}, '${safeLabel}', '${safeAddress}')">✏️</button>
+                                <button class="btn-danger btn-small" onclick="deleteFavorite(${fav.id})">X</button>
                             </div>
-                        </div>
-                    `;
+                        </div>`;
                 });
             }
-        } catch (err) {
-            listContainer.innerHTML = '<p style="color: red;">Erreur de chargement.</p>';
-        }
+        } catch (err) { listContainer.innerHTML = '<p style="color: red;">Erreur.</p>'; }
     }
 
     function startEdit(id, label, address) {
@@ -589,10 +378,7 @@
         const address = document.getElementById('fav-address').value;
         const msgBox = document.getElementById('msg-fav');
 
-        if(!label || !address) {
-            msgBox.style.color = "red"; msgBox.innerText = "Veuillez remplir tous les champs.";
-            return;
-        }
+        if(!label || !address) { msgBox.style.color = "red"; msgBox.innerText = "Remplissez tous les champs."; return; }
 
         msgBox.style.color = "#5f6368"; msgBox.innerText = "Recherche de l'adresse...";
 
@@ -603,53 +389,31 @@
                 body: JSON.stringify({ address })
             });
 
-            if (!geoRes.ok) {
-                msgBox.style.color = "red"; msgBox.innerText = "Adresse introuvable.";
-                return;
-            }
+            if (!geoRes.ok) { msgBox.style.color = "red"; msgBox.innerText = "Adresse introuvable."; return; }
 
             const coords = await geoRes.json();
-            const payload = {
-                placeName: label,
-                address: address,
-                latitude: coords.lat,
-                longitude: coords.lon
-            };
-
             const method = editFavoriteId ? 'PUT' : 'POST';
             const url = editFavoriteId ? `${API_URL}/api/navigation/favorites/${editFavoriteId}` : `${API_URL}/api/navigation/favorites`;
 
             const saveRes = await fetch(url, {
                 method: method,
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify(payload)
+                body: JSON.stringify({ placeName: label, address: address, latitude: coords.lat, longitude: coords.lon })
             });
 
-            if (saveRes.ok) {
-                cancelEdit();
-                loadFavorites();
-            } else {
-                msgBox.style.color = "red"; msgBox.innerText = "Erreur lors de la sauvegarde.";
-            }
-        } catch (err) {
-            msgBox.style.color = "red"; msgBox.innerText = "Erreur serveur.";
-        }
+            if (saveRes.ok) { cancelEdit(); loadFavorites(); }
+            else { msgBox.style.color = "red"; msgBox.innerText = "Erreur de sauvegarde."; }
+        } catch (err) { msgBox.style.color = "red"; msgBox.innerText = "Erreur serveur."; }
     }
 
     async function deleteFavorite(id) {
         if(!confirm("Supprimer ce favori ?")) return;
         try {
             const res = await fetch(`${API_URL}/api/navigation/favorites/${id}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` }
+                method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` }
             });
-            if(res.ok) {
-                if(editFavoriteId === id) cancelEdit();
-                loadFavorites();
-            }
-        } catch (err) {
-            console.error("Erreur de suppression", err);
-        }
+            if(res.ok) { if(editFavoriteId === id) cancelEdit(); loadFavorites(); }
+        } catch (err) { console.error(err); }
     }
 </script>
 </body>

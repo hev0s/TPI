@@ -7,11 +7,11 @@
 
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
+    <link rel="stylesheet" href="/public/css/main.css">
 
     <style>
-        body { margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; height: 100vh; overflow: hidden; background-color: #e5e3df; }
-
-        /* On donne une couleur "eau" au fond de la carte pour éviter le gris si l'écran est gigantesque */
+        /* Styles spécifiques UNIQUEMENT pour la carte, garantissant votre beau design */
+        body { margin: 0; padding: 0; height: 100vh; overflow: hidden; }
         .leaflet-container { background: #aad3df !important; }
 
         #map { position: absolute; top: -25vh; left: -25vw; width: 150vw; height: 150vh; z-index: 1; }
@@ -21,63 +21,20 @@
         .leaflet-bottom { bottom: calc(25vh + 100px) !important; }
         .leaflet-left { left: calc(25vw + 10px) !important; }
 
-        /* glassmorphism */
-        #controls, #eta-panel, #speed-panel, .autocomplete-list, .leaflet-routing-container {
-            background: rgba(255, 255, 255, 0.75) !important;
-            backdrop-filter: blur(16px) !important;
-            -webkit-backdrop-filter: blur(16px) !important;
-            border: 1px solid rgba(255, 255, 255, 0.6) !important;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12) !important;
-        }
-
         #controls {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            z-index: 1000;
-            padding: 20px;
+            position: absolute; top: 20px; left: 20px; z-index: 1000;
+            padding: 20px; width: 340px; max-width: calc(100vw - 40px);
+            display: flex; flex-direction: column; gap: 15px; box-sizing: border-box;
             border-radius: 20px;
-            width: 340px;
-            max-width: calc(100vw - 40px);
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            box-sizing: border-box;
         }
 
         .input-group { display: flex; flex-direction: column; gap: 10px; width: 100%; }
         .waypoint-row { display: flex; gap: 6px; align-items: center; width: 100%; }
         .waypoint-row .autocomplete-wrapper { flex-grow: 1; position: relative; width: 100%; }
-
-        input, select {
-            padding: 14px 16px;
-            border: 1px solid rgba(218, 220, 224, 0.6);
-            border-radius: 12px;
-            font-size: 15px;
-            background-color: rgba(255, 255, 255, 0.6);
-            transition: all 0.2s ease;
-            width: 100%;
-            box-sizing: border-box;
-            min-height: 48px;
-            color: #202124;
-        }
-        input:focus, select:focus { outline: none; border-color: #1a73e8; background-color: white; box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.2); }
-
-        .autocomplete-list {
-            position: absolute; top: 100%; left: 0; right: 0;
-            border-radius: 12px;
-            z-index: 2000; list-style: none; margin: 5px 0 0 0; padding: 0; max-height: 200px; overflow-y: auto;
-        }
-        .autocomplete-list li {
-            padding: 12px 16px; cursor: pointer; border-bottom: 1px solid rgba(241, 243, 244, 0.5);
-            font-size: 14px; color: #3c4043; line-height: 1.4;
-        }
-        .autocomplete-list li:hover { background-color: rgba(248, 249, 250, 0.8); color: #1a73e8; }
-        .autocomplete-list li:last-child { border-bottom: none; }
+        .waypoint-input { margin-bottom: 0; } /* Overrides main.css for this specific layout */
 
         .waypoint-btn {
-            padding: 0; width: 48px; height: 48px; min-width: 48px;
-            border-radius: 12px;
+            padding: 0; width: 48px; height: 48px; min-width: 48px; border-radius: 12px;
             display: flex; justify-content: center; align-items: center;
             font-size: 18px; background: rgba(255, 255, 255, 0.8); color: #5f6368; border: 1px solid #dadce0;
             transition: all 0.2s; cursor: pointer;
@@ -87,158 +44,54 @@
         .btn-del:hover { background: #fce8e6; border-color: #ea4335; color: #ea4335; }
 
         .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        button {
-            padding: 12px;
-            cursor: pointer;
-            border: none;
-            border-radius: 12px;
-            font-size: 15px;
-            font-weight: 600;
-            transition: transform 0.1s, filter 0.2s;
-            min-height: 48px;
-        }
-        button:active { transform: scale(0.97); }
-        button:hover { filter: brightness(0.95); }
-
         .btn-route { background: #1a73e8; color: white; grid-column: span 2; font-size: 16px; padding: 14px;}
         .btn-add-stop { background: rgba(255, 255, 255, 0.7); color: #1a73e8; border: 1px solid #dadce0; width: 100%; grid-column: span 2;}
         .btn-logout { background: #f1f3f4; color: #3c4043; grid-column: span 2; }
-
         .btn-nav { background: #34a853; color: white; grid-column: span 2; display: none; font-size: 16px; padding: 16px; box-shadow: 0 4px 10px rgba(52, 168, 83, 0.3); }
         .btn-stop-nav { background: #ea4335; color: white; grid-column: span 2; display: none; padding: 16px; font-size: 16px;}
 
         .leaflet-routing-geocoders { display: none !important; }
-        .leaflet-routing-container {
-            border-radius: 20px !important;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.15) !important;
-            padding: 10px !important;
-            font-family: inherit !important;
-            margin-top: 20px !important;
-            max-height: 35vh;
-            overflow-y: auto;
-        }
+        .leaflet-routing-container { max-height: 35vh; overflow-y: auto; margin-top: 20px !important; }
 
         #eta-panel {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100vw;
-            padding: 20px 20px 30px 20px;
-            border-radius: 24px 24px 0 0;
-            z-index: 1000;
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            box-sizing: border-box;
+            position: absolute; bottom: 0; left: 0; width: 100vw; padding: 20px 20px 30px 20px;
+            border-radius: 24px 24px 0 0; z-index: 1000; display: none; flex-direction: column;
+            align-items: center; box-sizing: border-box;
         }
         #eta-time { font-size: 32px; font-weight: 800; color: #202124; margin-bottom: 5px;}
         #eta-details { font-size: 16px; color: #5f6368; font-weight: 500; text-align: center; line-height: 1.4;}
         .eta-highlight { color: #34a853; font-weight: 700; }
 
         #speed-panel {
-            display: none;
-            position: absolute;
-            left: 20px;
-            bottom: 150px;
-            width: 65px;
-            height: 65px;
-            border-radius: 24px;
-            border: 4px solid #f9c71c;
-            z-index: 2000;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            box-sizing: border-box;
-            transition: border-color 0.2s;
+            display: none; position: absolute; left: 20px; bottom: 150px; width: 65px; height: 65px;
+            border-radius: 24px; border: 4px solid #f9c71c; z-index: 2000; flex-direction: column;
+            justify-content: center; align-items: center; box-sizing: border-box; transition: border-color 0.2s;
         }
         #speed-value { font-size: 22px; font-weight: 800; color: #202124; line-height: 1; margin-top: 2px; transition: color 0.2s;}
         #speed-unit { font-size: 11px; color: #5f6368; font-weight: 600; }
 
-        /* Animation du point GPS style Google Maps */
-        @keyframes pulse-animation {
-            0% { transform: scale(1); opacity: 0.8; }
-            100% { transform: scale(3.5); opacity: 0; }
-        }
-        .gps-pulse {
-            animation: pulse-animation 2s ease-out infinite;
-        }
+        @keyframes pulse-animation { 0% { transform: scale(1); opacity: 0.8; } 100% { transform: scale(3.5); opacity: 0; } }
+        .gps-pulse { animation: pulse-animation 2s ease-out infinite; }
 
-        /* Marker de recharge sur la carte */
         .charging-marker-icon {
-            background: white;
-            border: 2px solid #34a853;
-            border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            background: white; border: 2px solid #34a853; border-radius: 50%;
+            width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
+            font-size: 18px; box-shadow: 0 2px 5px rgba(0,0,0,0.3);
         }
 
-        /* Responsive Mobile et Tablette */
+        /* Responsive */
         @media (max-width: 768px) {
-            #controls {
-                top: 10px; /* Panneau en haut */
-                left: 10px;
-                right: 10px;
-                width: calc(100vw - 20px);
-                max-height: 55vh; /* Ajustable si bcp d'étapes, mais laisse la carte visible */
-                overflow-y: auto;
-                padding: 15px;
-            }
-
-            #eta-panel {
-                bottom: 0; /* ETA reste fixé en bas */
-            }
-
-            #speed-panel {
-                bottom: 130px; /* S'assure d'être au-dessus du panneau ETA */
-                left: 10px;
-                width: 55px;
-                height: 55px;
-            }
+            #controls { top: 10px; left: 10px; right: 10px; width: calc(100vw - 20px); max-height: 55vh; overflow-y: auto; padding: 15px; }
+            #speed-panel { bottom: 130px; left: 10px; width: 55px; height: 55px; }
             #speed-value { font-size: 18px; }
-
-            /* Cache les options en navigation */
             body.navigating #route-options-container { display: none !important; }
         }
 
-        /* Responsive Paysage */
         @media (orientation: landscape) and (max-height: 700px) {
-            #controls {
-                top: 10px;
-                bottom: auto;
-                left: 10px;
-                width: 300px;
-                max-height: calc(100vh - 20px);
-                overflow-y: auto;
-                padding: 15px;
-            }
-
-            #eta-panel {
-                width: 280px;
-                left: auto;
-                right: 10px;
-                bottom: 10px;
-                border-radius: 20px;
-                padding: 15px;
-            }
-
-            #speed-panel {
-                left: 10px;
-                bottom: 10px;
-                width: 55px;
-                height: 55px;
-                border-radius: 20px;
-            }
+            #controls { top: 10px; bottom: auto; left: 10px; width: 300px; max-height: calc(100vh - 20px); overflow-y: auto; padding: 15px; }
+            #eta-panel { width: 280px; left: auto; right: 10px; bottom: 10px; border-radius: 20px; padding: 15px; }
+            #speed-panel { left: 10px; bottom: 10px; width: 55px; height: 55px; border-radius: 20px; }
             #speed-value { font-size: 18px; }
-            .btn-nav, .btn-stop-nav {
-                padding: 12px;
-                font-size: 14px;
-            }
-            /* Cache les options en format paysage sur mobile si on est en navigation */
             body.navigating #route-options-container { display: none !important; }
         }
     </style>
@@ -246,47 +99,28 @@
 
 <body style="display: none;" id="main-body">
 
-<script src="/js/translations.js"></script>
+<script src="/public/js/auth.js"></script>
+<script src="/public/js/translations.js"></script>
 
 <script>
-    const API_URL = "https://tpi-5ter.onrender.com"; // A décommenter quand mis sur SwissCenter
-    //const API_URL = "http://localhost:3000"; // A commenter quand mis sur SwissCenter
-
+    // Initialisation
+    document.addEventListener('DOMContentLoaded', async () => {
+        const isAuth = await verifyAuth(false);
+        if (isAuth) {
+            if (typeof setLanguage === 'function') {
+                setLanguage(localStorage.getItem('appLang') || 'fr');
+            }
+            initMap();
+            loadUserCarsForNav();
+        }
+    });
     const token = localStorage.getItem('token');
-
-    if (!token) {
-        window.location.replace('index.html');
-    } else {
-        fetch(`${API_URL}/api/verify`, {
-            method: 'GET',
-            headers: { 'Authorization': `Bearer ${token}` }
-        })
-            .then(response => {
-                if (response.ok) {
-                    document.getElementById('main-body').style.display = 'block';
-
-                    if (typeof setLanguage === 'function') {
-                        setLanguage(localStorage.getItem('appLang') || 'fr');
-                    }
-
-                    initMap();
-                    loadUserCarsForNav(); // Chargement de la voiture
-                } else {
-                    localStorage.removeItem('token');
-                    window.location.replace('index.html');
-                }
-            })
-            .catch(error => {
-                console.error("Erreur de connexion", error);
-                window.location.replace('index.html');
-            });
-    }
 </script>
 
 <div id="controls">
     <div id="header-controls" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-        <button id="btn-settings" aria-label="Ouvrir les paramètres" onclick="window.location.href='settings.html'" style="background: transparent; color: #5f6368; padding: 5px; font-size: 20px; box-shadow: none; min-width: auto;">⚙️</button>
-        <h3 style="margin: 0; color: #202124;">DuckyVolt</h3>
+        <button id="btn-settings" aria-label="Ouvrir les paramètres" onclick="window.location.href='settings.html'" style="background: transparent; color: #5f6368; padding: 5px; font-size: 20px; box-shadow: none; min-width: auto; width:auto; border:none;">⚙️</button>
+        <h3 style="margin: 0; color: #202124; border:none; padding-bottom:0;">DuckyVolt</h3>
     </div>
 
     <div class="input-group" id="car-selector-container" style="display: none; margin-bottom: 15px;">
@@ -348,7 +182,6 @@
 
 <div id="map"></div>
 
-
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
 
@@ -358,28 +191,17 @@
     let userLocation = null;
     let userMarker = null;
 
-    // Tableau global pour stocker et supprimer les bornes de recharge
     let chargingMarkers = [];
-
-    // FLAG GLOBAL POUR LES DETOURS (Empêche la boucle infinie)
     let isOptimizingRoute = false;
-
     let currentRouteDuration = 0;
     let currentRouteDistance = 0;
     let navInterval = null;
-
     let isNavigating = false;
     let wakeLock = null;
-
-    // Stockage des coordonnées de l'itinéraire pour le recalcul intelligent
     let currentRouteCoords = null;
-
-    // Variables limitation de vitesse et unité
     let currentSpeedLimit = null;
     let lastSpeedLimitCheckTime = 0;
-    let currentSpeedUnit = 'km/h'; // Unité dynamique par défaut
-
-    // Variables et fonction pour les véhicules
+    let currentSpeedUnit = 'km/h';
     let selectedCarId = localStorage.getItem('selectedCarId') || null;
 
     document.getElementById('allow-stops-toggle').addEventListener('change', () => {
@@ -389,7 +211,6 @@
     document.getElementById('route-type-selector').addEventListener('change', () => {
         if (routingControl) calculateRoute();
     });
-
 
     async function loadUserCarsForNav() {
         try {
@@ -431,22 +252,13 @@
                         carSelector.appendChild(optgroupAll);
                     }
 
-                    if (selectedCarId) {
-                        carSelector.value = selectedCarId;
-                    } else if (userCars.length > 0) {
-                        selectedCarId = userCars[0].id;
-                        carSelector.value = selectedCarId;
-                        localStorage.setItem('selectedCarId', selectedCarId);
-                    } else if (allCars.length > 0) {
-                        selectedCarId = allCars[0].id;
-                        carSelector.value = selectedCarId;
-                        localStorage.setItem('selectedCarId', selectedCarId);
-                    }
+                    if (selectedCarId) { carSelector.value = selectedCarId; }
+                    else if (userCars.length > 0) { selectedCarId = userCars[0].id; carSelector.value = selectedCarId; localStorage.setItem('selectedCarId', selectedCarId); }
+                    else if (allCars.length > 0) { selectedCarId = allCars[0].id; carSelector.value = selectedCarId; localStorage.setItem('selectedCarId', selectedCarId); }
 
                     carSelector.addEventListener('change', (e) => {
                         selectedCarId = e.target.value;
                         localStorage.setItem('selectedCarId', selectedCarId);
-                        console.log("Véhicule sélectionné pour le trajet :", selectedCarId);
                     });
                 } else {
                     carContainer.style.display = 'none';
@@ -454,17 +266,11 @@
                     localStorage.removeItem('selectedCarId');
                 }
             }
-        } catch (err) {
-            console.error("Erreur lors du chargement des véhicules :", err);
-        }
+        } catch (err) { console.error("Erreur véhicules :", err); }
     }
 
     async function fetchSpeedLimit(lat, lng) {
-        const query = `
-        [out:json];
-        way(around:30, ${lat}, ${lng})["highway"]["maxspeed"];
-        out tags;
-    `;
+        const query = `[out:json];way(around:30, ${lat}, ${lng})["highway"]["maxspeed"];out tags;`;
         const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`;
 
         try {
@@ -472,115 +278,61 @@
             const data = await response.json();
 
             if (data.elements && data.elements.length > 0) {
-                // On passe tout en minuscules pour faciliter la recherche
                 const maxspeed = data.elements[0].tags.maxspeed.toLowerCase();
+                if (maxspeed === "none") { currentSpeedUnit = 'km/h'; return null; }
+                if (maxspeed.includes("mph")) { currentSpeedUnit = 'mph'; return parseInt(maxspeed, 10); }
 
-                // 1. Cas de l'Allemagne (Autobahn sans limite)
-                if (maxspeed === "none") {
-                    currentSpeedUnit = 'km/h';
-                    return null;
-                }
-
-                // 2. Cas des USA / UK (Détection de "mph")
-                if (maxspeed.includes("mph")) {
-                    currentSpeedUnit = 'mph';
-                    return parseInt(maxspeed, 10); // On renvoie directement la valeur en mph
-                }
-
-                // On remet l'unité par défaut si ce n'est pas "mph"
                 currentSpeedUnit = 'km/h';
-
-                // 3. Cas des balises textuelles internationales (FR:urban, IT:rural, etc.)
                 if (maxspeed.includes("urban") || maxspeed.includes("city")) return 50;
                 if (maxspeed.includes("living_street") || maxspeed.includes("walk")) return 20;
                 if (maxspeed.includes("rural") || maxspeed.includes("national")) return 80;
                 if (maxspeed.includes("expressway") || maxspeed.includes("trunk")) return 100;
                 if (maxspeed.includes("motorway")) return 120;
 
-                // 4. Cas standard (Juste un nombre, ex: "80", "130")
                 const parsedSpeed = parseInt(maxspeed, 10);
                 if (!isNaN(parsedSpeed)) return parsedSpeed;
             }
-        } catch (error) {
-            console.error("Erreur lors de la récupération de la limitation de vitesse", error);
-        }
-
-        // En cas d'erreur ou si on ne trouve rien, on remet l'unité par défaut
+        } catch (error) { console.error("Erreur limitation", error); }
         currentSpeedUnit = 'km/h';
         return null;
     }
 
     async function requestWakeLock() {
-        try {
-            if ('wakeLock' in navigator) {
-                wakeLock = await navigator.wakeLock.request('screen');
-            }
-        } catch (err) {}
+        try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); }
+        catch (err) {}
     }
 
     function releaseWakeLock() {
-        if (wakeLock !== null) {
-            wakeLock.release().then(() => {
-                wakeLock = null;
-            });
-        }
+        if (wakeLock !== null) { wakeLock.release().then(() => { wakeLock = null; }); }
     }
 
     document.addEventListener('visibilitychange', async () => {
-        if (isNavigating && document.visibilityState === 'visible') {
-            await requestWakeLock();
-        }
+        if (isNavigating && document.visibilityState === 'visible') await requestWakeLock();
     });
 
-    // Fonction pour vérifier si on a quitté l'itinéraire
     function isOffRoute(userLatLng, routeCoords, thresholdMeters = 50) {
         if (!routeCoords || routeCoords.length === 0) return false;
-
         let minDistance = Infinity;
-        // Trouve le point du tracé le plus proche de l'utilisateur
         for (let i = 0; i < routeCoords.length; i++) {
             let dist = userLatLng.distanceTo(routeCoords[i]);
-            if (dist < minDistance) {
-                minDistance = dist;
-            }
+            if (dist < minDistance) minDistance = dist;
         }
-
-        // Si la distance minimale est supérieure au seuil, on est hors trajet
         return minDistance > thresholdMeters;
     }
 
     function initMap() {
-        // Limite le dézoom (minZoom: 3) et contraint la caméra au monde (maxBounds) pour éviter l'affichage de plusieurs carte du monde
-        map = L.map('map', {
-            zoomControl: false,
-            minZoom: 3,
-            maxBounds: [
-                [-90, -180],
-                [90, 180]
-            ],
-            maxBoundsViscosity: 1.0
-        }).setView([46.8, 6.5], 10);
-
+        map = L.map('map', { zoomControl: false, minZoom: 3, maxBounds: [[-90, -180], [90, 180]], maxBoundsViscosity: 1.0 }).setView([46.8, 6.5], 10);
         L.control.zoom({ position: 'bottomright' }).addTo(map);
-
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '© OpenStreetMap'
-        }).addTo(map);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(map);
 
         if ("geolocation" in navigator) {
             navigator.geolocation.watchPosition(
                 function(position) {
                     userLocation = L.latLng(position.coords.latitude, position.coords.longitude);
-
                     const heading = position.coords.heading;
                     const speedMs = position.coords.speed || 0;
 
-                    // Conversion dynamique (mph ou km/h)
-                    const displaySpeed = currentSpeedUnit === 'mph'
-                        ? Math.round(speedMs * 2.23694)
-                        : Math.round(speedMs * 3.6);
-
+                    const displaySpeed = currentSpeedUnit === 'mph' ? Math.round(speedMs * 2.23694) : Math.round(speedMs * 3.6);
                     const speedValueEl = document.getElementById('speed-value');
                     const speedUnitEl = document.getElementById('speed-unit');
                     const speedPanelEl = document.getElementById('speed-panel');
@@ -589,7 +341,6 @@
                         speedValueEl.innerText = displaySpeed;
                         if (speedUnitEl) speedUnitEl.innerText = currentSpeedUnit;
 
-                        // Changement de couleur dynamique si excès de vitesse
                         if (currentSpeedLimit && displaySpeed > currentSpeedLimit) {
                             speedValueEl.style.color = "#ea4335";
                             if (speedPanelEl) speedPanelEl.style.borderColor = "#ea4335";
@@ -599,27 +350,16 @@
                         }
                     }
 
-                    // Vérification limitation toutes les 15 secondes en navigation
                     const now = Date.now();
                     if (isNavigating && (now - lastSpeedLimitCheckTime > 15000)) {
                         lastSpeedLimitCheckTime = now;
                         fetchSpeedLimit(userLocation.lat, userLocation.lng).then(limit => {
-                            // Si on a quitté la navigation entre-temps, on ignore la réponse de l'API
                             if (!isNavigating) return;
+                            if (limit && !isNaN(limit)) { currentSpeedLimit = limit; } else { currentSpeedLimit = null; }
 
-                            if (limit && !isNaN(limit)) {
-                                currentSpeedLimit = limit;
-                            } else {
-                                currentSpeedLimit = null;
-                            }
-
-                            // Force la mise à jour visuelle (vitesse recalculée + unité + couleur)
                             if (speedValueEl) {
                                 const currentSpeedMs = position.coords.speed || 0;
-                                const currentDisplaySpeed = currentSpeedUnit === 'mph'
-                                    ? Math.round(currentSpeedMs * 2.23694)
-                                    : Math.round(currentSpeedMs * 3.6);
-
+                                const currentDisplaySpeed = currentSpeedUnit === 'mph' ? Math.round(currentSpeedMs * 2.23694) : Math.round(currentSpeedMs * 3.6);
                                 speedValueEl.innerText = currentDisplaySpeed;
                                 if (speedUnitEl) speedUnitEl.innerText = currentSpeedUnit;
 
@@ -635,19 +375,13 @@
                     }
 
                     if (!userMarker) {
-                        // Style : Marqueur Google Maps dynamique avec pulsation
                         const userIcon = L.divIcon({
                             className: 'user-marker',
                             html: `
                 <div id="gps-icon" style="position: relative; width: 60px; height: 60px; display: flex; justify-content: center; align-items: center; transition: transform 0.3s linear; transform-origin: center center;">
                     <svg viewBox="0 0 60 60" style="position: absolute; top: 0; left: 0; width: 60px; height: 60px; z-index: 1;">
                         <path d="M30,30 L10,0 Q30,10 50,0 Z" fill="url(#cone-gradient)" opacity="0.6"/>
-                        <defs>
-                            <linearGradient id="cone-gradient" x1="0%" y1="100%" x2="0%" y2="0%">
-                                <stop offset="0%" stop-color="#4285F4" stop-opacity="1"/>
-                                <stop offset="100%" stop-color="#4285F4" stop-opacity="0"/>
-                            </linearGradient>
-                        </defs>
+                        <defs><linearGradient id="cone-gradient" x1="0%" y1="100%" x2="0%" y2="0%"><stop offset="0%" stop-color="#4285F4" stop-opacity="1"/><stop offset="100%" stop-color="#4285F4" stop-opacity="0"/></linearGradient></defs>
                     </svg>
                     <div class="gps-pulse" style="position: absolute; width: 16px; height: 16px; background-color: rgba(66, 133, 244, 0.4); border-radius: 50%; z-index: 2;"></div>
                     <div style="position: absolute; width: 16px; height: 16px; background-color: #4285F4; border: 3px solid white; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.4); z-index: 3;"></div>
@@ -658,16 +392,11 @@
 
                         userMarker = L.marker(userLocation, {icon: userIcon, zIndexOffset: 1000}).addTo(map);
                         map.setView(userLocation, 15);
-
-                        // On décale la caméra vers le haut pour faire descendre le pointeur sous le menu
                         map.panBy([0, -150], {animate: false});
-
                     } else {
                         userMarker.setLatLng(userLocation);
-
                         if (isNavigating) {
                             map.setView(userLocation, 17);
-
                             if (heading !== null && !isNaN(heading)) {
                                 const mapDiv = document.getElementById('map');
                                 mapDiv.style.transformOrigin = "center center";
@@ -683,15 +412,10 @@
                     }
 
                 },
-                function(error) {
-                    console.error("Erreur GPS:", error);
-                    alert("Erreur GPS (" + error.code + "): " + error.message);
-                },
+                function(error) { alert("Erreur GPS (" + error.code + "): " + error.message); },
                 { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
             );
-        } else {
-            alert("La géolocalisation n'est pas supportée par votre téléphone.");
-        }
+        } else { alert("La géolocalisation n'est pas supportée."); }
     }
 
     let autocompleteTimeout = null;
@@ -701,20 +425,13 @@
             const input = e.target;
             const val = input.value;
 
-            if (!val || val.length < 3) {
-                closeAllLists();
-                return;
-            }
+            if (!val || val.length < 3) { closeAllLists(); return; }
 
             clearTimeout(autocompleteTimeout);
-
             autocompleteTimeout = setTimeout(async () => {
                 try {
                     let requestBody = { text: val };
-                    if (userLocation) {
-                        requestBody.lat = userLocation.lat;
-                        requestBody.lon = userLocation.lng;
-                    }
+                    if (userLocation) { requestBody.lat = userLocation.lat; requestBody.lon = userLocation.lng; }
 
                     const response = await fetch(`${API_URL}/api/navigation/autocomplete`, {
                         method: 'POST',
@@ -725,7 +442,6 @@
                     if (response.ok) {
                         const suggestions = await response.json();
                         closeAllLists();
-
                         if (suggestions.length === 0) return;
 
                         const list = document.createElement('ul');
@@ -737,10 +453,7 @@
                             const cleanText = suggest.split(',').slice(0, 3).join(',');
                             item.innerText = cleanText;
 
-                            item.addEventListener('click', () => {
-                                input.value = cleanText;
-                                closeAllLists();
-                            });
+                            item.addEventListener('click', () => { input.value = cleanText; closeAllLists(); });
                             list.appendChild(item);
                         });
                     }
@@ -749,20 +462,11 @@
         }
     });
 
-    function closeAllLists() {
-        const lists = document.querySelectorAll('.autocomplete-list');
-        lists.forEach(l => l.remove());
-    }
-
-    document.addEventListener('click', function(e) {
-        if (!e.target.classList.contains('waypoint-input')) {
-            closeAllLists();
-        }
-    });
+    function closeAllLists() { document.querySelectorAll('.autocomplete-list').forEach(l => l.remove()); }
+    document.addEventListener('click', function(e) { if (!e.target.classList.contains('waypoint-input')) closeAllLists(); });
 
     function addStop() {
         const container = document.getElementById('waypoints-container');
-
         const row = document.createElement('div');
         row.className = 'waypoint-row';
 
@@ -779,29 +483,18 @@
         row.appendChild(wrapper);
 
         const btnUp = document.createElement('button');
-        btnUp.type = 'button';
-        btnUp.className = 'waypoint-btn';
-        btnUp.innerHTML = '↑';
-        btnUp.setAttribute('aria-label', "Déplacer l'étape vers le haut");
+        btnUp.type = 'button'; btnUp.className = 'waypoint-btn'; btnUp.innerHTML = '↑';
         btnUp.onclick = () => moveStop(row, -1);
 
         const btnDown = document.createElement('button');
-        btnDown.type = 'button';
-        btnDown.className = 'waypoint-btn';
-        btnDown.innerHTML = '↓';
-        btnDown.setAttribute('aria-label', "Déplacer l'étape vers le bas");
+        btnDown.type = 'button'; btnDown.className = 'waypoint-btn'; btnDown.innerHTML = '↓';
         btnDown.onclick = () => moveStop(row, 1);
 
         const btnDel = document.createElement('button');
-        btnDel.type = 'button';
-        btnDel.className = 'waypoint-btn btn-del';
-        btnDel.innerHTML = '✕';
-        btnDel.setAttribute('aria-label', "Supprimer l'étape");
+        btnDel.type = 'button'; btnDel.className = 'waypoint-btn btn-del'; btnDel.innerHTML = '✕';
         btnDel.onclick = () => row.remove();
 
-        row.appendChild(btnUp);
-        row.appendChild(btnDown);
-        row.appendChild(btnDel);
+        row.appendChild(btnUp); row.appendChild(btnDown); row.appendChild(btnDel);
         container.insertBefore(row, container.lastElementChild);
     }
 
@@ -809,38 +502,24 @@
         const container = document.getElementById('waypoints-container');
         const children = Array.from(container.children);
         const index = children.indexOf(row);
-        if (direction === -1 && index > 1) {
-            container.insertBefore(row, children[index - 1]);
-        } else if (direction === 1 && index < children.length - 2) {
-            container.insertBefore(row, children[index + 2]);
-        }
+        if (direction === -1 && index > 1) { container.insertBefore(row, children[index - 1]); }
+        else if (direction === 1 && index < children.length - 2) { container.insertBefore(row, children[index + 2]); }
     }
 
     async function geocodeAddress(address) {
         try {
             let requestBody = { address: address };
-            if (userLocation) {
-                requestBody.lat = userLocation.lat;
-                requestBody.lon = userLocation.lng;
-            }
+            if (userLocation) { requestBody.lat = userLocation.lat; requestBody.lon = userLocation.lng; }
             const response = await fetch(`${API_URL}/api/navigation/geocode`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
                 body: JSON.stringify(requestBody)
             });
             if (response.ok) {
                 const data = await response.json();
                 return L.latLng(data.lat, data.lon);
-            } else {
-                return null;
-            }
-        } catch (error) {
-            console.error("Erreur serveur lors du géocodage", error);
-            return null;
-        }
+            } else { return null; }
+        } catch (error) { return null; }
     }
 
     function updateETAPanel() {
@@ -858,16 +537,12 @@
             const h = Math.floor(durationMins / 60);
             const m = durationMins % 60;
             document.getElementById('eta-duration').innerText = `${h}h ${m} min`;
-        } else {
-            document.getElementById('eta-duration').innerText = `${durationMins} min`;
-        }
+        } else { document.getElementById('eta-duration').innerText = `${durationMins} min`; }
         document.getElementById('eta-distance').innerText = `${distanceKm} km`;
     }
 
     async function calculateRoute() {
-        // Reset le statut pour permettre une nouvelle optimisation de la ligne bleue
         isOptimizingRoute = false;
-
         const inputs = document.querySelectorAll('.waypoint-input');
         let waypoints = [];
         const routeBtn = document.querySelector('.btn-route');
@@ -875,10 +550,7 @@
         routeBtn.innerText = "⏳ Calcul en cours...";
         routeBtn.style.opacity = "0.7";
 
-        // Nettoyage des anciennes bornes de recharge
-        if (chargingMarkers) {
-            chargingMarkers.forEach(m => map.removeLayer(m));
-        }
+        if (chargingMarkers) chargingMarkers.forEach(m => map.removeLayer(m));
         chargingMarkers = [];
 
         for (let i = 0; i < inputs.length; i++) {
@@ -887,11 +559,10 @@
                 if (i === 0 && userLocation) waypoints.push(userLocation);
             } else {
                 const latLng = await geocodeAddress(address);
-                if (latLng) {
-                    waypoints.push(latLng);
-                } else {
+                if (latLng) { waypoints.push(latLng); }
+                else {
                     alert(`Adresse introuvable : ${address}`);
-                    routeBtn.innerText = typeof t === 'function' ? t('search_route') : "Rechercher l'itinéraire";
+                    routeBtn.innerText = typeof t === 'function' ? t('search_route') : "Calculer pour l'itinéraire";
                     routeBtn.style.opacity = "1";
                     return;
                 }
@@ -900,7 +571,7 @@
 
         if (waypoints.length < 2) {
             alert("Il faut au moins un point de départ et une destination !");
-            routeBtn.innerText = typeof t === 'function' ? t('search_route') : "Rechercher l'itinéraire";
+            routeBtn.innerText = typeof t === 'function' ? t('search_route') : "Calculer pour l'itinéraire";
             routeBtn.style.opacity = "1";
             return;
         }
@@ -915,29 +586,20 @@
         const routeType = document.getElementById('route-type-selector').value;
         const allowStops = document.getElementById('allow-stops-toggle').checked;
 
-        // Définition de la couleur en fonction du mode
-        let routeColor = '#1a73e8'; // Bleu par défaut (Normal)
-        if (routeType === 'eco') {
-            routeColor = '#34a853'; // Vert (Éco)
-        } else if (routeType === 'sport') {
-            routeColor = '#ea4335'; // Rouge (Sport)
-        }
+        let routeColor = '#1a73e8';
+        if (routeType === 'eco') routeColor = '#34a853';
+        else if (routeType === 'sport') routeColor = '#ea4335';
 
         routingControl = L.Routing.control({
             waypoints: waypoints,
             routeWhileDragging: true,
             language: 'fr',
             showAlternatives: true,
-            fitSelectedRoutes: !isNavigating, // Empêche de dézoomer de force si on est en train de naviguer
-            lineOptions: {
-                styles: [{color: routeColor, opacity: 0.8, weight: 6}]
-            },
+            fitSelectedRoutes: !isNavigating,
+            lineOptions: { styles: [{color: routeColor, opacity: 0.8, weight: 6}] },
             createMarker: function(i, waypoint, n) {
-                if (i === 0) {
-                    return null;
-                } else {
-                    return L.marker(waypoint.latLng);
-                }
+                if (i === 0) return null;
+                else return L.marker(waypoint.latLng);
             }
         }).addTo(map);
 
@@ -948,23 +610,19 @@
             const summary = routes[0].summary;
             currentRouteDuration = summary.totalTime;
             currentRouteDistance = summary.totalDistance;
-
-            // Sauvegarder les coordonnées du tracé pour vérifier si on change de routes
             currentRouteCoords = routes[0].coordinates;
 
             updateETAPanel();
 
             const resetRouteButton = () => {
                 if(routeBtn) {
-                    routeBtn.innerText = typeof t === 'function' ? t('search_route') : "Rechercher l'itinéraire";
+                    routeBtn.innerText = typeof t === 'function' ? t('search_route') : "Calculer pour l'itinéraire";
                     routeBtn.style.opacity = "1";
                 }
             };
 
-            // --- APPEL API DE SIMULATION AVEC SEGMENTS ---
             if (selectedCarId) {
                 try {
-                    // Construction des segments à partir des instructions de navigation
                     const instructions = routes[0].instructions;
                     const routeSegments = instructions.map(inst => {
                         let speed_kmh = 50;
@@ -981,13 +639,7 @@
                     const simRes = await fetch(`${API_URL}/api/calculs/simulate`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                        body: JSON.stringify({
-                            carId: selectedCarId,
-                            routeSegments: routeSegments,
-                            routeType: routeType,
-                            allowStops: allowStops,
-                            coordinates: sampledCoordinates
-                        })
+                        body: JSON.stringify({ carId: selectedCarId, routeSegments: routeSegments, routeType: routeType, allowStops: allowStops, coordinates: sampledCoordinates })
                     });
 
                     if (!routingControl) return;
@@ -998,17 +650,9 @@
                         if (simData.needsChargingStop && !allowStops) {
                             alert("Itinéraire impossible sans faire des arrêts");
                             resetRouteButton();
-
-                            // Si on était en navigation, on coupe tout proprement
-                            if (isNavigating) {
-                                stopNavigation();
-                            } else {
-                                // Sinon on nettoie juste la carte
-                                if (routingControl) {
-                                    routingControl.setWaypoints([]);
-                                    map.removeControl(routingControl);
-                                    routingControl = null;
-                                }
+                            if (isNavigating) stopNavigation();
+                            else {
+                                if (routingControl) { routingControl.setWaypoints([]); map.removeControl(routingControl); routingControl = null; }
                                 document.querySelectorAll('.leaflet-routing-container').forEach(el => el.remove());
                                 currentRouteCoords = null;
                                 document.getElementById('btn-start-nav').style.display = 'none';
@@ -1017,83 +661,46 @@
                             return;
                         }
 
-                        // --- 1. OPTIMISATION DU TRAJET VERS LES VRAIES BORNES (PREMIER PASSAGE) ---
-                        // Si le serveur suggère des arrêts ET qu'on ne les a pas encore intégrés au tracé
                         if (simData.chargingTime_s > 0 && !isOptimizingRoute && simData.suggestedStops && simData.suggestedStops.length > 0) {
-
-                            isOptimizingRoute = true; // On bloque ce bloc pour le prochain passage
+                            isOptimizingRoute = true;
                             routeBtn.innerText = "🔌 Détour vers les bornes...";
 
-                            // On lance la recherche Overpass pour chaque arrêt suggéré
                             let fetchPromises = simData.suggestedStops.map(stop => {
                                 const query = `[out:json];node(around:5000, ${stop.lat}, ${stop.lon})["amenity"="charging_station"];out 1;`;
                                 const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`;
-
-                                return fetch(url)
-                                    .then(response => response.json())
-                                    .then(data => {
-                                        if (data.elements && data.elements.length > 0) {
-                                            // Vraie station trouvée
-                                            return { lat: data.elements[0].lat, lon: data.elements[0].lon, found: true };
-                                        }
-                                        return { lat: stop.lat, lon: stop.lon, found: false };
-                                    })
-                                    .catch(() => ({ lat: stop.lat, lon: stop.lon, found: false }));
+                                return fetch(url).then(r => r.json()).then(data => {
+                                    if (data.elements && data.elements.length > 0) return { lat: data.elements[0].lat, lon: data.elements[0].lon, found: true };
+                                    return { lat: stop.lat, lon: stop.lon, found: false };
+                                }).catch(() => ({ lat: stop.lat, lon: stop.lon, found: false }));
                             });
 
                             Promise.all(fetchPromises).then(realStations => {
                                 let currentWps = routingControl.getWaypoints().map(w => w.latLng).filter(l => l);
-
                                 if (currentWps.length >= 2) {
-                                    let dest = currentWps.pop(); // Retire temporairement la destination finale
-
-                                    realStations.forEach(st => {
-                                        if (st.found) {
-                                            // Ajoute la vraie borne comme étape forcée du trajet
-                                            currentWps.push(L.latLng(st.lat, st.lon));
-                                        }
-                                    });
-
-                                    currentWps.push(dest); // Remet la destination finale à la fin
-
-                                    // On modifie l'itinéraire ! Leaflet va tracer la nouvelle ligne et relancer l'événement 'routesfound'
+                                    let dest = currentWps.pop();
+                                    realStations.forEach(st => { if (st.found) currentWps.push(L.latLng(st.lat, st.lon)); });
+                                    currentWps.push(dest);
                                     routingControl.setWaypoints(currentWps);
                                 }
                             });
-
-                            return; // On arrête l'exécution ici pour laisser Leaflet recalculer la nouvelle route
+                            return;
                         }
 
-                        // --- 2. AFFICHAGE FINAL (DEUXIÈME PASSAGE OU TRAJET DIRECT SANS PANNE) ---
-
-                        // On ajoute le temps de recharge à l'ETA
                         if (simData.chargingTime_s > 0) {
                             currentRouteDuration += simData.chargingTime_s;
                             updateETAPanel();
 
                             if (simData.suggestedStops && simData.suggestedStops.length > 0) {
                                 simData.suggestedStops.forEach((stop, index) => {
-                                    // Création de l'icône ⚡
-                                    const chargeIcon = L.divIcon({
-                                        className: 'charging-marker',
-                                        html: '<div class="charging-marker-icon">⚡</div>',
-                                        iconSize: [34, 34],
-                                        iconAnchor: [17, 17]
-                                    });
-
-                                    // Création immédiate du marqueur sur la carte, exactement sur la nouvelle ligne bleue
-                                    let marker = L.marker([stop.lat, stop.lon], {icon: chargeIcon, zIndexOffset: 1500})
-                                        .addTo(map)
+                                    const chargeIcon = L.divIcon({ className: 'charging-marker', html: '<div class="charging-marker-icon">⚡</div>', iconSize: [34, 34], iconAnchor: [17, 17] });
+                                    let marker = L.marker([stop.lat, stop.lon], {icon: chargeIcon, zIndexOffset: 1500}).addTo(map)
                                         .bindPopup(`<b>Station de recharge (Arrêt ${index + 1})</b><br>Station incluse dans l'itinéraire.`);
-
                                     chargingMarkers.push(marker);
                                 });
                             }
                         }
 
                         let warningHtml = "";
-
-                        // Affichage des recommandations selon le back-end
                         if (simData.needsChargingStop) {
                             const stopText = simData.stopsNeeded > 1 ? `(${simData.stopsNeeded} arrêts nécessaires)` : `(1 arrêt nécessaire)`;
                             const chargeMins = Math.round((simData.chargingTime_s || 0) / 60);
@@ -1112,35 +719,23 @@
                       ${warningHtml}
                   `;
                     }
-                } catch (err) {
-                    console.error("Erreur de simulation", err);
-                }
+                } catch (err) { console.error("Erreur simulation", err); }
             }
 
             resetRouteButton();
-
-            if (!isNavigating && routingControl) {
-                document.getElementById('btn-start-nav').style.display = 'block';
-            }
+            if (!isNavigating && routingControl) document.getElementById('btn-start-nav').style.display = 'block';
         });
 
         routingControl.on('routingerror', function(err) {
             alert("Destination inatteignable par la route");
-
-            routeBtn.innerText = typeof t === 'function' ? t('search_route') : "Rechercher l'itinéraire";
+            routeBtn.innerText = typeof t === 'function' ? t('search_route') : "Calculer pour l'itinéraire";
             routeBtn.style.opacity = "1";
 
-            // Si on était en navigation, on arrête tout
-            if (isNavigating) {
-                stopNavigation();
-            } else {
+            if (isNavigating) stopNavigation();
+            else {
                 document.getElementById('btn-start-nav').style.display = 'none';
                 document.getElementById('eta-panel').style.display = 'none';
-                if (routingControl) {
-                    routingControl.setWaypoints([]);
-                    map.removeControl(routingControl);
-                    routingControl = null;
-                }
+                if (routingControl) { routingControl.setWaypoints([]); map.removeControl(routingControl); routingControl = null; }
                 document.querySelectorAll('.leaflet-routing-container').forEach(el => el.remove());
                 currentRouteCoords = null;
             }
@@ -1158,36 +753,21 @@
         document.getElementById('btn-add-stop').style.display = 'none';
         document.getElementById('main-buttons').style.display = 'none';
         document.getElementById('btn-start-nav').style.display = 'none';
-
         document.querySelector('.leaflet-routing-container').style.display = 'none';
 
         document.getElementById('btn-stop-nav').style.display = 'block';
         document.getElementById('eta-panel').style.display = 'flex';
-
         document.getElementById('speed-panel').style.display = 'flex';
 
-        if (routingControl) {
-            routingControl.options.fitSelectedRoutes = false;
-        }
+        if (routingControl) routingControl.options.fitSelectedRoutes = false;
+        if (userLocation) map.setView(userLocation, 17);
 
-        if (userLocation) {
-            map.setView(userLocation, 17);
-        }
-
-        // SetInterval revu pour le recalcul intelligent et un meilleur centrage (toutes les 3 sec)
         navInterval = setInterval(() => {
             if (userLocation && routingControl && isNavigating) {
-                // Toujours centrer la caméra sur l'utilisateur
                 map.setView(userLocation, 17);
-
-                // Vérifier si l'utilisateur est à plus de 50 mètres du tracé
                 if (currentRouteCoords && isOffRoute(userLocation, currentRouteCoords, 50)) {
-                    console.log("Utilisateur hors itinéraire. Recalcul en cours...");
-
                     const waypoints = routingControl.getWaypoints();
                     waypoints[0].latLng = userLocation;
-
-                    // En relançant setWaypoints, Leaflet-Routing-Machine va recalculer, et l'événement 'routesfound' mettra à jour currentRouteCoords
                     routingControl.setWaypoints(waypoints);
                 }
             }
@@ -1196,19 +776,15 @@
 
     function stopNavigation() {
         isNavigating = false;
-        document.body.classList.remove('navigating'); // Retire la classe au stop
+        document.body.classList.remove('navigating');
         releaseWakeLock();
 
         const mapDiv = document.getElementById('map');
         mapDiv.style.transform = `rotate(0deg)`;
 
         document.getElementById('header-controls').style.display = 'flex';
-
-        // Seulement réafficher le sélecteur si on avait sélectionné un véhicule et qu'on en a plus d'un
         const carSelector = document.getElementById('car-selector');
-        if (carSelector && carSelector.options.length > 0) {
-            document.getElementById('car-selector-container').style.display = 'block';
-        }
+        if (carSelector && carSelector.options.length > 0) document.getElementById('car-selector-container').style.display = 'block';
 
         document.getElementById('waypoints-container').style.display = 'flex';
         document.getElementById('btn-add-stop').style.display = 'block';
@@ -1216,25 +792,14 @@
 
         document.getElementById('btn-start-nav').style.display = 'none';
         document.getElementById('btn-stop-nav').style.display = 'none';
-
         document.getElementById('speed-panel').style.display = 'none';
         document.getElementById('eta-panel').style.display = 'none';
 
-        if (routingControl) {
-            routingControl.setWaypoints([]);
-            map.removeControl(routingControl);
-            routingControl = null;
-        }
-
-        // Nettoyage des marqueurs si la navigation est coupée
-        if (chargingMarkers) {
-            chargingMarkers.forEach(m => map.removeLayer(m));
-            chargingMarkers = [];
-        }
+        if (routingControl) { routingControl.setWaypoints([]); map.removeControl(routingControl); routingControl = null; }
+        if (chargingMarkers) { chargingMarkers.forEach(m => map.removeLayer(m)); chargingMarkers = []; }
 
         document.querySelectorAll('.leaflet-routing-container').forEach(el => el.remove());
         currentRouteCoords = null;
-
         currentSpeedLimit = null;
         currentSpeedUnit = 'km/h';
 
@@ -1247,17 +812,7 @@
         if (speedPanelEl) speedPanelEl.style.borderColor = "#f9c71c";
 
         if (navInterval) clearInterval(navInterval);
-
-        if (userLocation) {
-            map.setView(userLocation, 13);
-            // On redécale la position pour l'écran d'accueil
-            map.panBy([0, -150], {animate: false});
-        }
-    }
-
-    function logout() {
-        localStorage.removeItem('token');
-        window.location.replace('index.html');
+        if (userLocation) { map.setView(userLocation, 13); map.panBy([0, -150], {animate: false}); }
     }
 </script>
 </body>
