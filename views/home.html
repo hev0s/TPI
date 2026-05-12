@@ -21,66 +21,65 @@
         .leaflet-bottom { bottom: calc(25vh + 100px) !important; }
         .leaflet-left { left: calc(25vw + 10px) !important; }
 
+        /* glassmorphism */
+        #controls, #eta-panel, #speed-panel, .autocomplete-list, .leaflet-routing-container {
+            background: rgba(255, 255, 255, 0.75) !important;
+            backdrop-filter: blur(16px) !important;
+            -webkit-backdrop-filter: blur(16px) !important;
+            border: 1px solid rgba(255, 255, 255, 0.6) !important;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12) !important;
+        }
+
         #controls {
             position: absolute;
             top: 20px;
             left: 20px;
             z-index: 1000;
-            /* Glassmorphism */
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.5);
             padding: 20px;
             border-radius: 20px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.15);
-            width: 320px;
+            width: 340px;
             max-width: calc(100vw - 40px);
             display: flex;
             flex-direction: column;
             gap: 15px;
+            box-sizing: border-box;
         }
 
         .input-group { display: flex; flex-direction: column; gap: 10px; width: 100%; }
         .waypoint-row { display: flex; gap: 6px; align-items: center; width: 100%; }
         .waypoint-row .autocomplete-wrapper { flex-grow: 1; position: relative; width: 100%; }
 
-        input {
+        input, select {
             padding: 14px 16px;
-            border: 1px solid #dadce0;
-            border-radius: 12px; /* Bords arrondis */
+            border: 1px solid rgba(218, 220, 224, 0.6);
+            border-radius: 12px;
             font-size: 15px;
-            /* Translucide pour s'intégrer au panneau */
-            background-color: rgba(241, 243, 244, 0.7);
+            background-color: rgba(255, 255, 255, 0.6);
             transition: all 0.2s ease;
             width: 100%;
             box-sizing: border-box;
+            min-height: 48px;
+            color: #202124;
         }
-        input:focus { outline: none; border-color: #1a73e8; background-color: white; box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.2); }
+        input:focus, select:focus { outline: none; border-color: #1a73e8; background-color: white; box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.2); }
 
         .autocomplete-list {
             position: absolute; top: 100%; left: 0; right: 0;
-            /* Glassmorphism sur la liste déroulante */
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid #dadce0;
-            border-radius: 12px; /* Bords arrondis */
-            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+            border-radius: 12px;
             z-index: 2000; list-style: none; margin: 5px 0 0 0; padding: 0; max-height: 200px; overflow-y: auto;
         }
         .autocomplete-list li {
             padding: 12px 16px; cursor: pointer; border-bottom: 1px solid rgba(241, 243, 244, 0.5);
             font-size: 14px; color: #3c4043; line-height: 1.4;
         }
-        .autocomplete-list li:hover { background-color: #f8f9fa; color: #1a73e8; }
+        .autocomplete-list li:hover { background-color: rgba(248, 249, 250, 0.8); color: #1a73e8; }
         .autocomplete-list li:last-child { border-bottom: none; }
 
         .waypoint-btn {
-            padding: 0; width: 38px; height: 38px; min-width: 38px;
-            border-radius: 12px; /* Bords arrondis */
+            padding: 0; width: 48px; height: 48px; min-width: 48px;
+            border-radius: 12px;
             display: flex; justify-content: center; align-items: center;
-            font-size: 16px; background: rgba(255, 255, 255, 0.8); color: #5f6368; border: 1px solid #dadce0;
+            font-size: 18px; background: rgba(255, 255, 255, 0.8); color: #5f6368; border: 1px solid #dadce0;
             transition: all 0.2s; cursor: pointer;
         }
         .waypoint-btn:hover { background: #f8f9fa; border-color: #1a73e8; color: #1a73e8; }
@@ -92,10 +91,11 @@
             padding: 12px;
             cursor: pointer;
             border: none;
-            border-radius: 12px; /* Bords arrondis pour tous boutons */
+            border-radius: 12px;
             font-size: 15px;
             font-weight: 600;
             transition: transform 0.1s, filter 0.2s;
+            min-height: 48px;
         }
         button:active { transform: scale(0.97); }
         button:hover { filter: brightness(0.95); }
@@ -109,17 +109,12 @@
 
         .leaflet-routing-geocoders { display: none !important; }
         .leaflet-routing-container {
-            /* Glassmorphism */
-            background: rgba(255, 255, 255, 0.85) !important;
-            backdrop-filter: blur(12px) !important;
-            -webkit-backdrop-filter: blur(12px) !important;
-            border: 1px solid rgba(255, 255, 255, 0.5) !important;
             border-radius: 20px !important;
             box-shadow: 0 8px 32px rgba(0,0,0,0.15) !important;
             padding: 10px !important;
             font-family: inherit !important;
             margin-top: 20px !important;
-            max-height: 40vh;
+            max-height: 35vh;
             overflow-y: auto;
         }
 
@@ -128,40 +123,27 @@
             bottom: 0;
             left: 0;
             width: 100vw;
-            /* Glassmorphism */
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border-top: 1px solid rgba(255, 255, 255, 0.5);
-            padding: 20px;
-            border-top-left-radius: 24px;
-            border-top-right-radius: 24px;
-            box-shadow: 0 -8px 32px rgba(0,0,0,0.1);
+            padding: 20px 20px 30px 20px;
+            border-radius: 24px 24px 0 0;
             z-index: 1000;
             display: none;
             flex-direction: column;
             align-items: center;
             box-sizing: border-box;
-            padding-bottom: 30px;
         }
         #eta-time { font-size: 32px; font-weight: 800; color: #202124; margin-bottom: 5px;}
-        #eta-details { font-size: 16px; color: #5f6368; font-weight: 500; }
+        #eta-details { font-size: 16px; color: #5f6368; font-weight: 500; text-align: center; line-height: 1.4;}
         .eta-highlight { color: #34a853; font-weight: 700; }
 
         #speed-panel {
             display: none;
             position: absolute;
             left: 20px;
-            bottom: 130px;
+            bottom: 150px;
             width: 65px;
             height: 65px;
-            border-radius: 24px; /* Forme "Squircle" */
-            /* Glassmorphism */
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 4px solid #f9c71c; /* Couleur conservée */
-            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+            border-radius: 24px;
+            border: 4px solid #f9c71c;
             z-index: 2000;
             flex-direction: column;
             justify-content: center;
@@ -172,9 +154,7 @@
         #speed-value { font-size: 22px; font-weight: 800; color: #202124; line-height: 1; margin-top: 2px; transition: color 0.2s;}
         #speed-unit { font-size: 11px; color: #5f6368; font-weight: 600; }
 
-        /* ========================================================
-           ANIMATION POINT GPS STYLE GOOGLE MAPS
-           ======================================================== */
+        /* Animation du point GPS style Google Maps */
         @keyframes pulse-animation {
             0% { transform: scale(1); opacity: 0.8; }
             100% { transform: scale(3.5); opacity: 0; }
@@ -197,29 +177,52 @@
             box-shadow: 0 2px 5px rgba(0,0,0,0.3);
         }
 
-        @media (max-width: 600px) {
-            #controls { top: 10px; left: 10px; right: 10px; width: auto; }
-            /* Cache les options sur mobile si on est en navigation */
+        /* Responsive Mobile et Tablette */
+        @media (max-width: 768px) {
+            #controls {
+                top: 10px; /* Panneau en haut */
+                left: 10px;
+                right: 10px;
+                width: calc(100vw - 20px);
+                max-height: 55vh; /* Ajustable si bcp d'étapes, mais laisse la carte visible */
+                overflow-y: auto;
+                padding: 15px;
+            }
+
+            #eta-panel {
+                bottom: 0; /* ETA reste fixé en bas */
+            }
+
+            #speed-panel {
+                bottom: 130px; /* S'assure d'être au-dessus du panneau ETA */
+                left: 10px;
+                width: 55px;
+                height: 55px;
+            }
+            #speed-value { font-size: 18px; }
+
+            /* Cache les options en navigation */
             body.navigating #route-options-container { display: none !important; }
         }
-        @media (orientation: landscape) and (max-height: 600px) {
+
+        /* Responsive Paysage */
+        @media (orientation: landscape) and (max-height: 700px) {
             #controls {
                 top: 10px;
+                bottom: auto;
                 left: 10px;
-                width: 280px;
+                width: 300px;
                 max-height: calc(100vh - 20px);
                 overflow-y: auto;
                 padding: 15px;
             }
+
             #eta-panel {
-                width: 250px;
+                width: 280px;
                 left: auto;
                 right: 10px;
                 bottom: 10px;
-                border-top-left-radius: 20px;
-                border-top-right-radius: 20px;
-                border-bottom-left-radius: 20px;
-                border-bottom-right-radius: 20px;
+                border-radius: 20px;
                 padding: 15px;
             }
 
