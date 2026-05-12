@@ -51,6 +51,10 @@ router.post('/vehicules', verifyAdmin, async (req, res) => {
     if (!brand || !model) {
         return res.status(400).json({ error: 'Marque et modèle obligatoires' });
     }
+    // Validation des chiffres négatifs
+    if (battery_capacity < 0 || base_consumption < 0 || air_drag < 0) {
+        return res.status(400).json({ error: 'Les valeurs numériques ne peuvent pas être négatives.' });
+    }
     try {
         await createVehiculeAdmin(brand, model, battery_capacity, base_consumption, air_drag);
         res.status(201).json({ success: true, message: "Véhicule créé" });
@@ -64,6 +68,10 @@ router.put('/vehicules/:id', verifyAdmin, async (req, res) => {
     const { brand, model, battery_capacity, base_consumption, air_drag } = req.body;
     if (!brand || !model) {
         return res.status(400).json({ error: 'Marque et modèle obligatoires' });
+    }
+    // Validation des chiffres négatifs
+    if (battery_capacity < 0 || base_consumption < 0 || air_drag < 0) {
+        return res.status(400).json({ error: 'Les valeurs numériques ne peuvent pas être négatives.' });
     }
     try {
         await updateVehiculeAdmin(req.params.id, brand, model, battery_capacity, base_consumption, air_drag);
