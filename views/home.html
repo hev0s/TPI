@@ -683,8 +683,11 @@
                     }
 
                 },
-                function(error) { console.error("Erreur GPS:", error); },
-                { enableHighAccuracy: true, maximumAge: 0, timeout: 2000 }
+                function(error) {
+                    console.error("Erreur GPS:", error);
+                    alert("Erreur GPS (" + error.code + "): " + error.message);
+                },
+                { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
             );
         } else {
             alert("La géolocalisation n'est pas supportée par votre téléphone.");
