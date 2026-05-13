@@ -2,6 +2,7 @@
 
 // URL de l'API (Configuré pour la production via Swisscenter / Render)
 const API_URL = "https://tpi-5ter.onrender.com";
+//const API_URL = "https://tpi-1.onrender.com" // Backup si la première ne marche pas
 
 /**
  * Vérifie si l'utilisateur est authentifié et gère l'affichage ou la redirection.
