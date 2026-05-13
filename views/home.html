@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>DuckyVolt - Navigation</title>
 
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -10,8 +10,8 @@
     <link rel="stylesheet" href="/public/css/main.css">
 
     <style>
-        /* Styles spécifiques UNIQUEMENT pour la carte, garantissant votre beau design */
-        body { margin: 0; padding: 0; height: 100vh; overflow: hidden; }
+        /* Styles spécifiques UNIQUEMENT pour la carte */
+        body { margin: 0; padding: 0; height: 100dvh; overflow: hidden; justify-content: flex-start; }
         .leaflet-container { background: #aad3df !important; }
 
         #map { position: absolute; top: -25vh; left: -25vw; width: 150vw; height: 150vh; z-index: 1; }
@@ -22,8 +22,9 @@
         .leaflet-left { left: calc(25vw + 10px) !important; }
 
         #controls {
-            position: absolute; top: 20px; left: 20px; z-index: 1000;
-            padding: 20px; width: 340px; max-width: calc(100vw - 40px);
+            position: absolute;
+            top: max(20px, env(safe-area-inset-top));
+            left: 20px; z-index: 1000; width: 340px; max-width: calc(100vw - 40px);
             display: flex; flex-direction: column; gap: 15px; box-sizing: border-box;
             border-radius: 20px;
         }
@@ -31,7 +32,7 @@
         .input-group { display: flex; flex-direction: column; gap: 10px; width: 100%; }
         .waypoint-row { display: flex; gap: 6px; align-items: center; width: 100%; }
         .waypoint-row .autocomplete-wrapper { flex-grow: 1; position: relative; width: 100%; }
-        .waypoint-input { margin-bottom: 0; } /* Overrides main.css for this specific layout */
+        .waypoint-input { margin-bottom: 0; }
 
         .waypoint-btn {
             padding: 0; width: 48px; height: 48px; min-width: 48px; border-radius: 12px;
@@ -54,7 +55,8 @@
         .leaflet-routing-container { max-height: 35vh; overflow-y: auto; margin-top: 20px !important; }
 
         #eta-panel {
-            position: absolute; bottom: 0; left: 0; width: 100vw; padding: 20px 20px 30px 20px;
+            position: absolute; bottom: 0; left: 0; width: 100vw;
+            padding: 20px 20px max(30px, env(safe-area-inset-bottom)) 20px;
             border-radius: 24px 24px 0 0; z-index: 1000; display: none; flex-direction: column;
             align-items: center; box-sizing: border-box;
         }
@@ -79,20 +81,62 @@
             font-size: 18px; box-shadow: 0 2px 5px rgba(0,0,0,0.3);
         }
 
-        /* Responsive */
-        @media (max-width: 768px) {
-            #controls { top: 10px; left: 10px; right: 10px; width: calc(100vw - 20px); max-height: 55vh; overflow-y: auto; padding: 15px; }
+        /* --- RESPONSIVE MOBILE PORTRAIT --- */
+        @media (max-width: 768px) and (orientation: portrait) {
+            #controls {
+                top: max(10px, env(safe-area-inset-top));
+                left: 10px; right: 10px; width: calc(100vw - 20px);
+                max-height: 55vh; overflow-y: auto; padding: 15px;
+            }
             #speed-panel { bottom: 130px; left: 10px; width: 55px; height: 55px; }
             #speed-value { font-size: 18px; }
             body.navigating #route-options-container { display: none !important; }
+
+            body.navigating #controls {
+                background: transparent !important;
+                border: none !important;
+                box-shadow: none !important;
+                backdrop-filter: none !important;
+                -webkit-backdrop-filter: none !important;
+                padding: 0 !important;
+                top: max(60px, env(safe-area-inset-top)) !important;
+            }
         }
 
+        /* --- RESPONSIVE PAYSAGE (LANDSCAPE) --- */
         @media (orientation: landscape) and (max-height: 700px) {
-            #controls { top: 10px; bottom: auto; left: 10px; width: 300px; max-height: calc(100vh - 20px); overflow-y: auto; padding: 15px; }
-            #eta-panel { width: 280px; left: auto; right: 10px; bottom: 10px; border-radius: 20px; padding: 15px; }
-            #speed-panel { left: 10px; bottom: 10px; width: 55px; height: 55px; border-radius: 20px; }
+            #controls {
+                left: max(10px, env(safe-area-inset-left));
+                top: 50%; transform: translateY(-50%); /* Centrage vertical de l'accueil ! */
+                bottom: auto; width: 300px;
+                max-height: calc(100dvh - 20px); overflow-y: auto; padding: 15px;
+            }
+
+            /* Retire le centrage en mode navigation pour coller en haut à gauche */
+            body.navigating #controls {
+                width: auto; min-width: 200px; padding: 10px;
+                top: max(10px, env(safe-area-inset-top)); transform: none;
+            }
+
+            #eta-panel {
+                width: auto; min-width: 280px; left: auto;
+                right: max(10px, env(safe-area-inset-right));
+                bottom: max(10px, env(safe-area-inset-bottom));
+                border-radius: 20px; padding: 15px;
+            }
+            #speed-panel {
+                right: auto;
+                left: max(20px, env(safe-area-inset-left));
+                bottom: max(20px, env(safe-area-inset-bottom));
+                width: 65px; height: 65px; border-radius: 20px;
+            }
             #speed-value { font-size: 18px; }
             body.navigating #route-options-container { display: none !important; }
+            body.navigating #controls {
+                top: max(20px, env(safe-area-inset-top)) !important;
+                left: max(20px, env(safe-area-inset-left)) !important;
+                transform: none; width: auto; min-width: 200px;
+            }
         }
     </style>
 </head>
@@ -320,6 +364,29 @@
         return minDistance > thresholdMeters;
     }
 
+    // Fonction intelligente pour gérer le centrage de la caméra
+    function updateMapCenter() {
+        if (!userLocation) return;
+
+        let zoom = isNavigating ? 17 : 14;
+        let offsetPx = 0;
+        const isPortrait = window.innerWidth < window.innerHeight;
+
+        if (isNavigating) {
+            if (isPortrait) offsetPx = 120;
+        } else {
+            if (isPortrait) offsetPx = 250;
+        }
+
+        const targetPoint = map.project(userLocation, zoom).subtract([0, offsetPx]);
+        const targetLatLng = map.unproject(targetPoint, zoom);
+        map.setView(targetLatLng, zoom, { animate: false });
+
+        if (isNavigating) {
+            document.getElementById('map').style.transformOrigin = `50% calc(50% + ${offsetPx}px)`;
+        }
+    }
+
     function initMap() {
         map = L.map('map', { zoomControl: false, minZoom: 3, maxBounds: [[-90, -180], [90, 180]], maxBoundsViscosity: 1.0 }).setView([46.8, 6.5], 10);
         L.control.zoom({ position: 'bottomright' }).addTo(map);
@@ -391,18 +458,14 @@
                         });
 
                         userMarker = L.marker(userLocation, {icon: userIcon, zIndexOffset: 1000}).addTo(map);
-                        map.setView(userLocation, 15);
-                        map.panBy([0, -150], {animate: false});
+                        updateMapCenter();
                     } else {
                         userMarker.setLatLng(userLocation);
-                        if (isNavigating) {
-                            map.setView(userLocation, 17);
-                            if (heading !== null && !isNaN(heading)) {
-                                const mapDiv = document.getElementById('map');
-                                mapDiv.style.transformOrigin = "center center";
-                                mapDiv.style.transition = "transform 0.5s linear";
-                                mapDiv.style.transform = `rotate(${-heading}deg)`;
-                            }
+                        updateMapCenter();
+                        if (isNavigating && heading !== null && !isNaN(heading)) {
+                            const mapDiv = document.getElementById('map');
+                            mapDiv.style.transition = "transform 0.5s linear";
+                            mapDiv.style.transform = `rotate(${-heading}deg)`;
                         }
                     }
 
@@ -549,7 +612,7 @@
 
         routeBtn.innerText = "⏳ Calcul en cours...";
         routeBtn.style.opacity = "0.7";
-        routeBtn.disabled = true
+        routeBtn.disabled = true;
 
         if (chargingMarkers) chargingMarkers.forEach(m => map.removeLayer(m));
         chargingMarkers = [];
@@ -565,6 +628,7 @@
                     alert(`Adresse introuvable : ${address}`);
                     routeBtn.innerText = typeof t === 'function' ? t('search_route') : "Calculer pour l'itinéraire";
                     routeBtn.style.opacity = "1";
+                    routeBtn.disabled = false;
                     return;
                 }
             }
@@ -574,6 +638,7 @@
             alert("Il faut au moins un point de départ et une destination !");
             routeBtn.innerText = typeof t === 'function' ? t('search_route') : "Calculer pour l'itinéraire";
             routeBtn.style.opacity = "1";
+            routeBtn.disabled = false;
             return;
         }
 
@@ -724,7 +789,8 @@
                         const errorData = await simRes.json();
                         alert(errorData.error || "Erreur lors de la simulation");
                     }
-                } catch (err) { console.error("Erreur simulation", err); }            }
+                } catch (err) { console.error("Erreur simulation", err); }
+            }
 
             resetRouteButton();
             if (!isNavigating && routingControl) document.getElementById('btn-start-nav').style.display = 'block';
@@ -734,6 +800,7 @@
             alert("Destination inatteignable par la route");
             routeBtn.innerText = typeof t === 'function' ? t('search_route') : "Calculer pour l'itinéraire";
             routeBtn.style.opacity = "1";
+            routeBtn.disabled = false;
 
             if (isNavigating) stopNavigation();
             else {
@@ -764,11 +831,16 @@
         document.getElementById('speed-panel').style.display = 'flex';
 
         if (routingControl) routingControl.options.fitSelectedRoutes = false;
-        if (userLocation) map.setView(userLocation, 17);
+
+        // Force l'adaptation de la vue
+        setTimeout(() => {
+            map.invalidateSize();
+            updateMapCenter();
+        }, 150);
 
         navInterval = setInterval(() => {
             if (userLocation && routingControl && isNavigating) {
-                map.setView(userLocation, 17);
+                updateMapCenter();
                 if (currentRouteCoords && isOffRoute(userLocation, currentRouteCoords, 50)) {
                     const waypoints = routingControl.getWaypoints();
                     waypoints[0].latLng = userLocation;
@@ -784,6 +856,7 @@
         releaseWakeLock();
 
         const mapDiv = document.getElementById('map');
+        mapDiv.style.transformOrigin = "center center";
         mapDiv.style.transform = `rotate(0deg)`;
 
         document.getElementById('header-controls').style.display = 'flex';
@@ -816,7 +889,15 @@
         if (speedPanelEl) speedPanelEl.style.borderColor = "#f9c71c";
 
         if (navInterval) clearInterval(navInterval);
-        if (userLocation) { map.setView(userLocation, 13); map.panBy([0, -150], {animate: false}); }
+
+        // On réinitialise et on repositionne
+        setTimeout(() => {
+            map.invalidateSize();
+            if (userLocation) {
+                map.setView(userLocation, 13);
+                map.panBy([0, -150], {animate: false});
+            }
+        }, 150);
     }
 </script>
 </body>
