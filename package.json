@@ -29,6 +29,7 @@
     "mysql2": "^3.16.3"
   },
   "devDependencies": {
+    "cypress": "^15.15.0",
     "jest": "^30.4.2",
     "nodemon": "^3.1.11",
     "supertest": "^7.2.2"
