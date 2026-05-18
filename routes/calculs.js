@@ -411,10 +411,13 @@ router.post('/simulate', verifyToken, async (req, res) => {
             let penteEnPourcentage = segment.slope || 0;
             let localCx = cx; // Copie de l'aérodynamisme du véhicule pour l'altérer localement
 
-            // GESTION DU CAHIER DES CHARGES : TUNNELS
+            // GESTION DU CAHIER DES CHARGES : TUNNELS ET PONTS
+            if (segment.isTunnel || segment.isBridge) {
+                penteEnPourcentage = 0; // Force la pente à 0% sur les ponts et dans les tunnels
+            }
+
             if (segment.isTunnel) {
-                penteEnPourcentage = 0; // Force la pente à 0%
-                localCx = 0; // Annule l'impact de l'aérodynamisme
+                localCx = 0; // Annule l'impact de l'aérodynamisme dans les tunnels fermés
             }
 
             const distance_m = segment.distance;

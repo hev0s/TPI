@@ -65,14 +65,14 @@ describe('Tests complets - Simulateur Physique & Consommation', () => {
         expect(resStops.body.stopsNeeded).toBeGreaterThan(0);
     });
 
-    it('Annule la pente et l\'aérodynamisme si un Tunnel est détecté par Overpass', async () => {
+    it('Annule la pente si un Pont est détecté par Overpass', async () => {
         // 1. Premier fetch (ORS) : réussi
         global.fetch.mockResolvedValueOnce({ ok: true, json: async () => ({ geometry: [] }) });
-        // 2. Deuxième fetch (Overpass) : renvoie un tunnel
+        // 2. Deuxième fetch (Overpass) : renvoie un pont
         global.fetch.mockResolvedValueOnce({
             ok: true,
             json: async () => ({
-                elements: [{ tags: { tunnel: "yes" }, center: { lat: 46.05, lon: 6.05 } }]
+                elements: [{ tags: { bridge: "yes" }, center: { lat: 46.05, lon: 6.05 } }]
             })
         });
 
