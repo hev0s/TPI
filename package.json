@@ -1,6 +1,6 @@
 {
   "name": "tpi",
-  "version": "0.0.1",
+  "version": "0.9.1",
   "description": "Application web de simulation de la consommation de véhicules électriques.",
   "homepage": "https://github.com/hev0s/TPI#readme",
   "bugs": {
