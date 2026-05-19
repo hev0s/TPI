@@ -1,8 +1,10 @@
 // public/js/auth.js
 
-// URL de l'API (Configuré pour la production via Swisscenter / Render)
-const API_URL = "https://tpi-5ter.onrender.com";
-//const API_URL = "https://tpi-1.onrender.com" // Backup si la première ne marche pas
+// URL de l'API
+const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+    ? "http://localhost:3000"
+    : "https://tpi-5ter.onrender.com"; // l'URL de production
+    //: "https://tpi-1.onrender.com" // Backup si la première ne marche pas
 
 /**
  * Vérifie si l'utilisateur est authentifié et gère l'affichage ou la redirection.
@@ -14,7 +16,9 @@ async function verifyAuth(requireAdmin = false) {
     const token = localStorage.getItem('token');
 
     if (!token) {
-        window.location.replace('index.html');
+        if (!window.location.pathname.includes('index.html') && window.location.pathname !== '/') {
+            window.location.replace('index.html');
+        }
         return false;
     }
 
@@ -43,12 +47,14 @@ async function verifyAuth(requireAdmin = false) {
         }
     } catch (error) {
         console.error("Erreur de connexion au serveur", error);
+        localStorage.removeItem('token');
+        localStorage.removeItem('role');
         window.location.replace('index.html');
         return false;
     }
 }
-// Déconnexion et retour a la page de connexion
 
+// Déconnexion et retour a la page de connexion
 function logout() {
     localStorage.removeItem('token');
     localStorage.removeItem('role');

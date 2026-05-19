@@ -14,16 +14,34 @@ app.set('trust proxy', 1);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Middlewares
+app.use(express.json());
 app.use(cors({
     origin: 'https://tpi26nde.mycpnv.ch', // L'URL du front-end
     //origin: 'http://localhost:3000',
     credentials: true
 }));
 
-// HTML
+// Accès dossier public/
+app.use('/public', express.static(path.join(__dirname, 'public')));
+
+// Routes HTMl pour les pages
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'views/index.html'));
 });
+app.get('/index.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'views/index.html'));
+});
+app.get('/home.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'views/home.html'));
+});
+app.get('/settings.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'views/settings.html'));
+});
+app.get('/admin.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'views/admin.html'));
+});
+// Garde aussi l'ancienne route /admin au cas où
 app.get('/admin', (req, res) => {
     res.sendFile(path.join(__dirname, 'views/admin.html'));
 });
