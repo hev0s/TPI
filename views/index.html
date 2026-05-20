@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DuckyVolt - Connexion</title>
+    <link rel="stylesheet" href="/public/css/main.css">
+    <style>
+        body { flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+        .container { padding: 40px 30px; max-width: 360px; text-align: center; }
+        .lang-container { position: absolute; top: 20px; right: 20px; }
+        .hidden { display: none; }
+        p { color: #5f6368; font-size: 14px; margin: 0; }
+        a { color: #1a73e8; text-decoration: none; font-weight: 600; }
+        a:hover { text-decoration: underline; color: #1557b0; }
+        #message { margin-top: 16px; font-weight: 600; min-height: 20px; }
+
+        @media (max-width: 480px) {
+            .container { padding: 30px 20px; margin: 15px; width: calc(100% - 30px); }
+        }
+    </style>
+</head>
+<body>
+<script>
+    // Enlever le script et décommenter pour mettre la langue
+// <div class="lang-container">
+//    <select class="lang-selector" onchange="setLanguage(this.value)">
+//        <option value="fr">Français</option>
+//        <option value="en">English</option>
+//        <option value="de">Deutsch</option>
+//        <option value="it">Italiano</option>
+//    </select>
+//</div>
+</script>
+<div class="container" id="auth-container">
+    <div id="login-section">
+        <h2 data-i18n="login_title">Se connecter</h2>
+        <form id="login-form">
+            <input type="text" id="login-username" data-i18n-placeholder="username_placeholder" placeholder="Nom d'utilisateur" required>
+            <input type="password" id="login-password" data-i18n-placeholder="password_placeholder" placeholder="Mot de passe" required>
+            <button type="submit" data-i18n="login_btn">Connexion</button>
+        </form>
+        <p><span data-i18n="no_account">Pas de compte ?</span> <a href="#" onclick="toggleSection('signup')" data-i18n="signup_btn">S'inscrire</a></p>
+    </div>
+
+    <div id="signup-section" class="hidden">
+        <h2 data-i18n="signup_title">Créer un compte</h2>
+        <form id="signup-form">
+            <input type="text" id="signup-username" data-i18n-placeholder="username_placeholder" placeholder="Nom d'utilisateur" required>
+            <input type="password" id="signup-password" data-i18n-placeholder="password_placeholder" placeholder="Mot de passe" required>
+            <button type="submit" data-i18n="signup_btn">S'inscrire</button>
+        </form>
+        <p><span data-i18n="has_account">Déjà un compte ?</span> <a href="#" onclick="toggleSection('login')" data-i18n="login_btn">Se connecter</a></p>
+    </div>
+    <p id="message"></p>
+</div>
+
+<script src="/public/js/auth.js"></script>
+<script src="/public/js/translations.js"></script>
+<script>
+    // Redirection automatique si le token est présent
+    if (localStorage.getItem('token')) { window.location.replace('home.html'); }
+
+    function toggleSection(section) {
+        document.getElementById('login-section').classList.toggle('hidden', section === 'signup');
+        document.getElementById('signup-section').classList.toggle('hidden', section === 'login');
+        document.getElementById('message').innerText = '';
+    }
+
+    async function handleAuth(event, endpoint) {
+        event.preventDefault();
+        const formPrefix = endpoint === 'login' ? 'login' : 'signup';
+        const username = document.getElementById(`${formPrefix}-username`).value;
+        const password = document.getElementById(`${formPrefix}-password`).value;
+
+        try {
+            const response = await fetch(`${API_URL}/api/${endpoint}`, { // Utilise l'API_URL de auth.js
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+            const data = await response.json();
+
+            if (response.ok) {
+                document.getElementById('message').style.color = '#34a853';
+                if (endpoint === 'login') {
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('role', data.role);
+                    if (data.language) setLanguage(data.language);
+                    document.getElementById('message').innerText = 'Succès ! Redirection...';
+                    window.location.href = 'home.html';
+                } else {
+                    document.getElementById('message').innerText = 'Compte créé avec succès !';
+                    setTimeout(() => toggleSection('login'), 2000);
+                }
+            } else {
+                document.getElementById('message').style.color = '#ea4335';
+                document.getElementById('message').innerText = data.error || 'Une erreur est survenue';
+            }
+        } catch (error) {
+            document.getElementById('message').innerText = "Erreur de connexion au serveur.";
+        }
+    }
+
+    document.getElementById('login-form').addEventListener('submit', (e) => handleAuth(e, 'login'));
+    document.getElementById('signup-form').addEventListener('submit', (e) => handleAuth(e, 'signup'));
+</script>
+</body>
+</html>

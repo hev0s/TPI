@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DuckyVolt - Panneau d'Administration</title>
+    <link rel="stylesheet" href="/public/css/main.css"> <style>
+    .container { max-width: 800px; }
+    .btn-secondary { padding: 12px 15px; display: flex; align-items: center; }
+    .btn-primary, .btn-secondary { width: auto; margin-bottom: 0; }
+    .btn-danger { padding: 10px 15px; border-radius: 8px; min-height: 44px; width: auto; margin-top: 0; }
+    .btn-edit { background: #f9ab00; color: white; padding: 10px 15px; border: none; border-radius: 8px; cursor: pointer; font-weight: 500; min-height: 44px; width: auto;}
+
+    .car-list {
+        max-height: 400px; overflow-y: auto; margin-bottom: 20px;
+        background: rgba(248, 249, 250, 0.5); border-radius: 12px; padding: 10px;
+    }
+    .car-item {
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 12px 10px; border-bottom: 1px solid rgba(218, 220, 224, 0.6);
+    }
+    .car-item:last-child { border-bottom: none; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+    @media (max-width: 768px) {
+        .form-grid { grid-template-columns: 1fr; }
+        .car-item { flex-direction: column; align-items: flex-start; gap: 12px; }
+        .car-item > div:last-child { display: flex; width: 100%; justify-content: flex-end; gap: 10px; }
+    }
+</style>
+</head>
+<body style="display: none;" id="main-body">
+
+<script src="/public/js/auth.js"></script> <script>
+    // Initialisation avec vérification Admin stricte (true)
+    document.addEventListener('DOMContentLoaded', async () => {
+        const isAuth = await verifyAuth(true);
+        if (isAuth) {
+            loadAllCars();
+        }
+    });
+    const token = localStorage.getItem('token');
+</script>
+
+<div class="container">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <button class="btn-secondary" aria-label="Quitter" onclick="window.location.href='settings.html'">⬅ Quitter l'admin</button>
+        <h2 style="margin: 0;">🛠️ Panneau Admin</h2>
+    </div>
+
+    <div class="car-list" id="admin-cars-list"><p>Chargement des véhicules...</p></div>
+
+    <h3 id="form-title">Ajouter un nouveau véhicule</h3>
+    <div class="form-grid">
+        <input type="hidden" id="car-id">
+        <input type="text" id="car-brand" placeholder="Marque (ex: Tesla)" required>
+        <input type="text" id="car-model" placeholder="Modèle (ex: Model 3)" required>
+        <input type="number" step="0.1" min="0" id="car-battery" placeholder="Capacité Batterie (kWh)">
+        <input type="number" step="0.1" min="0" id="car-conso" placeholder="Conso de base (kWh/100km)">
+        <input type="number" step="0.01" min="0" id="car-cx" placeholder="Aérodynamisme (Cx)">
+    </div>
+    <div style="margin-top: 10px; display:flex; gap:10px;">
+        <button class="btn-primary" onclick="saveVehicle()">Enregistrer</button>
+        <button class="btn-secondary" onclick="resetForm()">Annuler</button>
+    </div>
+    <p id="admin-msg"></p>
+</div>
+
+<script>
+    async function loadAllCars() {
+        const list = document.getElementById('admin-cars-list');
+        try {
+            const res = await fetch(`${API_URL}/api/vehicules/all`, { headers: { 'Authorization': `Bearer ${token}` } });
+            const cars = await res.json();
+            list.innerHTML = '';
+            cars.forEach(car => {
+                list.innerHTML += `
+                    <div class="car-item">
+                        <div><strong>${car.brand}</strong> ${car.model}</div>
+                        <div style="display: flex; gap: 5px;">
+                            <button class="btn-edit" onclick="editVehicle(${car.id})">Modifier</button>
+                            <button class="btn-danger" onclick="deleteVehicle(${car.id})">Supprimer</button>
+                        </div>
+                    </div>`;
+            });
+        } catch (err) { list.innerHTML = '<p style="color:red">Erreur de chargement</p>'; }
+    }
+
+    async function editVehicle(id) {
+        try {
+            const res = await fetch(`${API_URL}/api/admin/vehicules/${id}`, { headers: { 'Authorization': `Bearer ${token}` } });
+            if(res.ok) {
+                const car = await res.json();
+                document.getElementById('form-title').innerText = "Modifier le véhicule";
+                document.getElementById('car-id').value = id;
+                document.getElementById('car-brand').value = car.brand;
+                document.getElementById('car-model').value = car.model;
+                document.getElementById('car-battery').value = car.battery_capacity;
+                document.getElementById('car-conso').value = car.base_consumption;
+                document.getElementById('car-cx').value = car.air_drag;
+            }
+        } catch(err) { alert("Erreur."); }
+    }
+
+    async function saveVehicle() {
+        const id = document.getElementById('car-id').value;
+        const brand = document.getElementById('car-brand').value.trim();
+        const model = document.getElementById('car-model').value.trim();
+        const battery = document.getElementById('car-battery').value;
+        const conso = document.getElementById('car-conso').value;
+        const cx = document.getElementById('car-cx').value;
+        const msgBox = document.getElementById('admin-msg');
+
+        // 1. Vérification de la présence des champs obligatoires
+        if (!brand || !model) {
+            msgBox.style.color = "red";
+            msgBox.innerText = "La marque et le modèle sont obligatoires.";
+            return;
+        }
+
+        // 2. Vérification contre les chiffres négatifs
+        if ((battery && battery < 0) || (conso && conso < 0) || (cx && cx < 0)) {
+            msgBox.style.color = "red";
+            msgBox.innerText = "Les valeurs techniques (batterie, conso, Cx) ne peuvent pas être négatives.";
+            return;
+        }
+
+        const payload = {
+            brand: brand,
+            model: model,
+            battery_capacity: battery || null,
+            base_consumption: conso || null,
+            air_drag: cx || null
+        };
+
+        const method = id ? 'PUT' : 'POST';
+        const url = id ? `${API_URL}/api/admin/vehicules/${id}` : `${API_URL}/api/admin/vehicules`;
+
+        try {
+            const res = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await res.json(); // On récupère la réponse (qui contient potentiellement notre erreur backend)
+
+            if(res.ok) {
+                msgBox.style.color = "green";
+                msgBox.innerText = "Sauvegardé avec succès !";
+                resetForm();
+                loadAllCars();
+            } else {
+                msgBox.style.color = "red";
+                msgBox.innerText = data.error || "Erreur lors de la sauvegarde.";
+            }
+        } catch(err) {
+            msgBox.style.color = "red";
+            msgBox.innerText = "Erreur réseau.";
+        }
+    }
+
+    async function deleteVehicle(id) {
+        if(!confirm("Supprimer ce véhicule du catalogue ?")) return;
+        try {
+            const res = await fetch(`${API_URL}/api/admin/vehicules/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+            if(res.ok) loadAllCars();
+        } catch(err) { alert("Erreur."); }
+    }
+
+    function resetForm() {
+        document.getElementById('form-title').innerText = "Ajouter un nouveau véhicule";
+        document.getElementById('car-id').value = '';
+        document.getElementById('car-brand').value = '';
+        document.getElementById('car-model').value = '';
+        document.getElementById('car-battery').value = '';
+        document.getElementById('car-conso').value = '';
+        document.getElementById('car-cx').value = '';
+    }
+</script>
+</body>
+</html>
